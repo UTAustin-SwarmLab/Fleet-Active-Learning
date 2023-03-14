@@ -2,11 +2,12 @@ import torch.nn as nn
 import torch
 from torch.utils.data import Dataset
 from PIL import Image
+from unc_utils import *
 
 # Classifier Model for the MNIST Datassets
 class SmallMNISTClassifier(nn.Module):
 
-    def __init__(self):
+    def __init__(self,unc_type:str):
         """
         Initializes the model
         """
@@ -32,6 +33,8 @@ class SmallMNISTClassifier(nn.Module):
             nn.ReLU(True),
             nn.Linear(128,10)
         )
+
+        self.unc_score = UncertaintyScore(unc_type)
         
     def forward(self, input):
         """
@@ -42,7 +45,7 @@ class SmallMNISTClassifier(nn.Module):
         x = self.EmbeddingLearner(input)
         flat_x = torch.flatten(x,1)
         out = self.fc(flat_x)
-        return out
+        return out, self.unc_score(out)
 
 class LargeMNISTClassifier(nn.Module):
 
@@ -92,4 +95,3 @@ class LargeMNISTClassifier(nn.Module):
         flat_x = torch.flatten(x,1)
         out = self.fc(flat_x)
         return out
-

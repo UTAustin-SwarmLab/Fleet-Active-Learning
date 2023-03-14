@@ -3,6 +3,34 @@ import torch.nn as nn
 import torch
 from torch.utils.data import Dataset
 from PIL import Image
+import torchvision.transforms as trfm
+
+# Function to Split Dataset
+def split_dataset(dataset:Dataset,split_ratio:float,random_state:int = 1) -> tuple:
+    '''
+    :param dataset: Dataset to be split
+    :param split_ratio: Ratio of split
+    :param random_state: Random state
+    :return: trainset and testset
+    '''
+
+    train_size = int(split_ratio * len(dataset))
+    test_size = len(dataset) - train_size
+    trainset, testset = torch.utils.data.random_split(dataset, [train_size, test_size], generator=torch.Generator().manual_seed(random_state))
+    return trainset, testset
+
+# Function to Create MNIST Dataset
+def create_MNIST_datasets(X,y):
+    """
+    :param X: data
+    :param y: labels
+    :return: MNIST Dataset
+    """
+    transform = trfm.Compose([
+    trfm.ToTensor(),
+    trfm.Normalize((0.1307), (0.3081))])
+    dataset = MNISTDataset(X,y,transform)
+    return dataset
 
 # Loads MNIST dataset from torchvision.datasets with specified type
 def load_MNIST_datasets(save_dir:str,type:str) -> tuple:
@@ -13,7 +41,6 @@ def load_MNIST_datasets(save_dir:str,type:str) -> tuple:
     :return: trainset and testset
     '''
 
-
     if type == "MNIST":
         trainset = datasets.MNIST(root=save_dir, train=True, download=True)
         testset = datasets.MNIST(root=save_dir, train=False, download=True)
@@ -23,9 +50,6 @@ def load_MNIST_datasets(save_dir:str,type:str) -> tuple:
     elif type == "KMNIST":
         trainset = datasets.KMNIST(root=save_dir, train=True, download=True)
         testset = datasets.KMNIST(root=save_dir, train=False, download=True)
-    elif type == "EMNIST":
-        trainset = datasets.EMNIST(root=save_dir, train=True, download=True)
-        testset = datasets.EMNIST(root=save_dir, train=False, download=True)
     else:
         print("Dataset not found")
         exit()
