@@ -1,7 +1,7 @@
 import torch
-from dataset_utils.dataset_utils import *
-from model_utils.mnist import *
-from model_utils.model_utils import *
+from utils.dataset_utils import *
+from utils.mnist import *
+from utils.model_utils import *
 
 # This is the code to train the LargeMNISTClassifier 
 # on different MNIST datasets

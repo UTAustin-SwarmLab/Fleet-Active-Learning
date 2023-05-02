@@ -1,2 +1,5 @@
 *.pt
-
+*.jpg
+*.jpeg
+runs/
+conv_opt/

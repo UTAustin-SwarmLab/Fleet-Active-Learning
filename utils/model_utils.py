@@ -3,8 +3,9 @@ import torch
 import torch.optim as optim
 from torch.optim import lr_scheduler
 from tqdm import tqdm
-from model_utils.mnist import SmallMNISTClassifier,LargeMNISTClassifier
+from utils.mnist import MNISTClassifier
 import os
+from utils.cifar10 import *
 
 # Function to initialize weights
 def init_weights(m):
@@ -32,12 +33,13 @@ def test_model(model,test_dataset,b_size:int=100):
     :param test_b_size: Batch size for the test dataset
     :return: Accuracy of the model
     """
+    model.eval()
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=b_size)
     correct = 0
     total = 0
     with torch.no_grad():
         for x,y in test_loader:
-            out = model(x.to(model.device))
+            out, _ = model(x.to(model.device))
             _, pred = torch.max(out.data, 1)
             total += y.size(0)
             correct += (pred == y.to(model.device)).sum().item()
@@ -69,7 +71,7 @@ def train_model(model,train_dataset,silent:bool=True):
 
             model.zero_grad()
 
-            out = model(x.to(model.device))
+            out,_ = model(x.to(model.device))
             loss = model.loss_fn(out, y.to(model.device))
 
             loss.backward()
@@ -94,10 +96,10 @@ def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,
     :return: Model
     """
 
-    if model_name == "SmallMNISTClassifier":
-        model = SmallMNISTClassifier()
-    elif model_name == "LargeMNISTClassifier":
-        model = LargeMNISTClassifier()
+    if model_name == "MNIST":
+        model = MNISTClassifier()
+    elif model_name == "CIFAR10":
+        model = CifarResNet(BasicBlock,[5]*3)
     else:
         raise ValueError("Model not found")
     

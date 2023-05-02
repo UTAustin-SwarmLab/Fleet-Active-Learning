@@ -1,6 +1,6 @@
 import torch
 
-# Uncertainty Estimation for Models to select
+# Uncertainty Estimation for Models to select based on classical active learning methods
 
 class UncertaintyScore():
     def __init__(self,type):
