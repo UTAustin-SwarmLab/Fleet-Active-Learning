@@ -16,6 +16,8 @@ def run_sim(opt,device):
 
     X_train,X_test,y_train,y_test = load_datasets(opt.dataset_loc,opt.dataset_type)
 
+    n_class = len(np.unique(y_train))
+
     test_data = create_datasets(X_test,y_test,opt.dataset_type)
 
     params = dict()
@@ -27,7 +29,7 @@ def run_sim(opt,device):
     params["b_size"] = opt.b_size
     params["n_iter"] = opt.n_iter
     
-    params["n_class"] = opt.n_class
+    params["n_class"] = n_class
     params["test_b_size"] = opt.test_b_size
     params["lr"] = opt.lr
     params["n_size"] = opt.n_size
@@ -35,6 +37,12 @@ def run_sim(opt,device):
     params["n_cache"] = opt.n_cache
     params["unc_type"] = opt.unc_type
     params["dataset_type"] = opt.dataset_type
+    params["converge"] = opt.converge_train
+    params["cache_all"] = opt.cache_all
+    params["dirichlet_alpha"] = opt.dirichlet_alpha
+    params["dirichlet"] = opt.dirichlet
+    params["dirichlet_base"] = opt.dirichlet_base
+    params["dirichlet_base_alpha"] = opt.dirichlet_base_alpha
 
 
     base_classes =  [i for i in range(params["n_class"])]
@@ -51,7 +59,7 @@ def run_sim(opt,device):
         simcoef_int = np.random.randint(low=1,high=100)
         simsum_int = np.random.randint(low=1,high=100)
 
-        model = get_model(opt.dataset_type,opt.dataset_type,device,opt.b_size,opt.n_epoch,opt.lr)
+        model = get_model(opt.dataset_type,opt.dataset_type,device,opt.b_size,opt.n_epoch,opt.lr,n_class)
 
         Unc_Model = Sim(params,"Base",device,model)
         
@@ -59,11 +67,11 @@ def run_sim(opt,device):
 
         base_inds = Unc_Model.dataset_ind[sim_i]
 
-        initial_dataset = Unc_Model.create_traindataset(X_train[Unc_Model.dataset_ind[sim_i]],y_train[Unc_Model.dataset_ind[sim_i]])
+        initial_dataset = Unc_Model.create_traindataset(X_train[tuple(Unc_Model.dataset_ind[sim_i])],y_train[tuple(Unc_Model.dataset_ind[sim_i])])
 
-        train_model(Unc_Model.model,initial_dataset)
+        train_model(Unc_Model.model,initial_dataset,converge=opt.converge_train)
 
-        accs = test_model(Unc_Model.model,test_data)
+        accs = test_model(Unc_Model.model,test_data,opt.test_b_size)
 
         print("Test accuracy: ",accs)
 
@@ -108,25 +116,32 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset-loc", type=str,default="/store/datasets")
-    parser.add_argument("--gpu-no", type=int,default=1)
-    parser.add_argument("--n-device", type=int, default=3)
+    parser.add_argument("--gpu-no", type=int,default=4)
+    parser.add_argument("--n-device", type=int, default=20)
     parser.add_argument("--n-sim", type=int, default=2)
     parser.add_argument("--n-rounds", type=int, default=5)
-    parser.add_argument("--n-epoch", type=int, default=50)
-    parser.add_argument("--b-size", type=int, default=1000)
+    parser.add_argument("--n-epoch", type=int, default=200)
+    parser.add_argument("--b-size", type=int, default=4)
     parser.add_argument("--init-sim", type=int, default=0) 
     parser.add_argument("--n_iter", type=int, default=3)
     parser.add_argument("--n-class", type=int, default=10)
-    parser.add_argument("--test-b-size", type=int, default=1000)
-    parser.add_argument("--lr", type=float, default=0.01)
-    parser.add_argument("--n-size", type=int, default=50)
-    parser.add_argument("--n-obs", type=int, default=2000)
-    parser.add_argument("--n-cache", type=int, default=4)
-    parser.add_argument("--run-loc", type=str, default="./runs/CIFAR10")
+    parser.add_argument("--test-b-size", type=int, default=8)
+    parser.add_argument("--lr", type=float, default=0.005)
+    parser.add_argument("--n-size", type=int, default=30)
+    parser.add_argument("--n-obs", type=int, default=1000)
+    parser.add_argument("--n-cache", type=int, default=2)
+    parser.add_argument("--run-loc", type=str, default="./runs/MNIST")
     parser.add_argument("--n-trial",type=int, default=2)
     parser.add_argument("--init-trial",type=int, default=0)
     parser.add_argument("--unc-type",type=str, default="badge")
-    parser.add_argument("--dataset-type",type=str, default="CIFAR10")
+    parser.add_argument("--dataset-type",type=str, default="MNIST")
+    parser.add_argument("--converge-train",type=bool, default=True)
+    parser.add_argument("--cache-all",type=bool, default=False)
+    parser.add_argument("--dirichlet",type=bool, default=True)
+    parser.add_argument("--dirichlet-base",type=bool, default=True)
+    parser.add_argument("--dirichlet-alpha",type=float, default=1)
+    parser.add_argument("--dirichlet-base-alpha",type=float, default=5)
+
 
     opt = parser.parse_args()
 

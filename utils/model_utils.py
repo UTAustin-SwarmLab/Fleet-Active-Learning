@@ -6,6 +6,7 @@ from tqdm import tqdm
 from utils.mnist import MNISTClassifier
 import os
 from utils.cifar10 import *
+from utils.adversarialweather import *
 
 # Function to initialize weights
 def init_weights(m):
@@ -46,12 +47,13 @@ def test_model(model,test_dataset,b_size:int=100):
     return correct/total
 
 # Function to train model
-def train_model(model,train_dataset,silent:bool=True):
+def train_model(model,train_dataset,silent:bool=True,converge:bool=False):
     """
     Trains the model on the train dataset
     :param model: Model to be trained
     :param train_dataset: Train dataset
     :param silent: If True, no progress bar is shown
+    :param converge: If True, the model is trained till convergence
     """
 
     model.train()
@@ -66,26 +68,61 @@ def train_model(model,train_dataset,silent:bool=True):
     else:
         pbar = [i for i in range(model.n_epoch)]
 
-    for epoch in pbar:
-        for x,y in dataloader:
+    if converge:
+        acc_final = 0
+        best_acc = 0
+        attempts = 0
+        epoch = 1
 
-            model.zero_grad()
+    if not converge:
+        for epoch in pbar:
+            for x,y in dataloader:
 
-            out,_ = model(x.to(model.device))
-            loss = model.loss_fn(out, y.to(model.device))
+                model.zero_grad()
 
-            loss.backward()
-            optimizer.step()
+                out,_ = model(x.to(model.device))
+                loss = model.loss_fn(out, y.to(model.device))
 
-        lr_sch.step()
+                loss.backward()
+                optimizer.step()
 
-        if not silent:
-            mem = "%.3gG" % (torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0)
-            s = ("%10s" * 1 + "%10.4g" * 1) % (mem, loss)
-            pbar.set_description(s)
+            lr_sch.step()
+
+            if not silent:
+                mem = "%.3gG" % (torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0)
+                s = ("%10s" * 1 + "%10.4g" * 1) % (mem, loss)
+                pbar.set_description(s)
+    else:
+        while epoch < model.n_epoch:
+
+            acc_final = 0.
+
+            for x,y in dataloader:
+
+                model.zero_grad()
+
+                out,_ = model(x.to(model.device))
+                loss = model.loss_fn(out, y.to(model.device))
+
+                acc_final += torch.sum((torch.max(out,1)[1] == y.to(model.device)).float()).data.item()
+
+                loss.backward()
+                optimizer.step()
+            
+            acc_final /= len(train_dataset)
+            lr_sch.step()
+
+            if epoch >= model.n_epoch//2 and acc_final < 0.2:
+                model.apply(init_weights)
+                optimizer = optim.Adam(model.parameters(), lr=model.lr)
+                lr_sch = lr_scheduler.ExponentialLR(optimizer,gamma=0.99,last_epoch=-1)
+                epoch = 0
+            else:
+                epoch += 1
+    
 
 # Function to get model
-def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,lr:float=0.001):
+def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,lr:float=0.001,n_class:int=5):
     """
     Returns the model
     :param model_name: Name of the model
@@ -100,6 +137,8 @@ def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,
         model = MNISTClassifier()
     elif model_name == "CIFAR10":
         model = CifarResNet(BasicBlock,[5]*3)
+    elif model_name == "AdversarialWeather" or model_name == "DeepDrive":
+        model = AdversarialWeatherResNet([2]*4,num_classes=n_class)
     else:
         raise ValueError("Model not found")
     
@@ -138,8 +177,6 @@ def load_model(model,loc:str):
     :param model: Model to be loaded
     :param loc: Location of the model weights
     """
-
     model.load_state_dict(torch.load(loc))
 
     return model
-

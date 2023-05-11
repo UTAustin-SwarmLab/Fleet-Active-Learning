@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 import cv2
 from tqdm import tqdm
 import json
+import numpy as np
 
 # Function to Split Dataset
 def split_dataset(dataset:Dataset,split_ratio:float,random_state:int = 1) -> tuple:
@@ -24,6 +25,13 @@ def split_dataset(dataset:Dataset,split_ratio:float,random_state:int = 1) -> tup
     trainset, testset = torch.utils.data.random_split(dataset, [train_size, test_size], generator=torch.Generator().manual_seed(random_state))
     return trainset, testset
 
+# Function to filter the dataset containing only the given indices
+
+def filter_indices(X_train,indices):
+
+    if np.isnumpy(X_train):
+        X_train = X_train[indices]
+
 # Function to load datasets
 def create_datasets(X,y,type,cache_all=False):
 
@@ -31,8 +39,8 @@ def create_datasets(X,y,type,cache_all=False):
         dataset = create_MNIST_datasets(X,y)
     elif type == "CIFAR10":
         dataset = create_CIFAR10_datasets(X,y)
-    elif type == "AdverseWeather" or type == "DeepDrive":
-        dataset = create_AdverseWeather_dataset(X,y,cache_all)
+    elif type == "AdversarialWeather" or type == "DeepDrive":
+        dataset = create_AdversarialWeather_dataset(X,y,cache_all)
     else:
         print("Dataset not found")
         exit()
@@ -65,19 +73,19 @@ def create_CIFAR10_datasets(X,y):
     dataset = CIFAR10Dataset(X,y,transform)
     return dataset
 
-# Creates AdverseWeather Dataset
-def create_AdverseWeather_dataset(X,y,cache_all=False):
+# Creates AdversarialWeather Dataset
+def create_AdversarialWeather_dataset(X,y,cache_all=False):
     transform  = trfm.Compose([
         trfm.Resize(256),
         trfm.RandomCrop(224),
         trfm.ToTensor(),
         trfm.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
     ])
-    dataset = AdverseWeatherDataset(X,y,transform,cache_all)
+    dataset = AdversarialWeatherDataset(X,y,transform,cache_all)
     return dataset
 
 # Function to Load Dataset
-def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.2,img_loc="store/datasets/bdd100k/images_resized/100k") -> tuple:
+def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.2,img_loc="/store/datasets/bdd100k/images_resized/100k") -> tuple:
     """
     :param save_dir: directory to save the dataset
     :param type: type of dataset to load
@@ -96,10 +104,10 @@ def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.2,img_loc="
     elif type == "CIFAR10":
         trainset = datasets.CIFAR10(root=save_dir, train=True, download=True)
         testset = datasets.CIFAR10(root=save_dir, train=False, download=True)
-    elif type == "AdverseWeather":
-        with open(save_dir+"/weather_labels.yaml","r") as file:
+    elif type == "AdversarialWeather":
+        with open(save_dir+"/weather_labels.yml","r") as file:
             weather_labels = yaml.safe_load(file)
-        with open(save_dir+"/daytime_labels.yaml","r") as file:
+        with open(save_dir+"/daytime_labels.yml","r") as file:
             daytime_labels = yaml.safe_load(file)
         
         img_locs = list(daytime_labels.keys())
@@ -124,7 +132,10 @@ def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.2,img_loc="
         y = torch.tensor(list(map(lambda x:classes.index(x),y)),dtype=int)
         X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=test_ratio,stratify=y,random_state=1)
 
-        return X_train, X_test, y_train, y_test
+        if cache_all:
+            return X_train, X_test, y_train, y_test, classes
+        else:
+            return np.array(X_train), np.array(X_test), y_train, y_test
     elif type == "DeepDrive":
          
         with open(save_dir+"/det_train.json","r") as file:
@@ -186,7 +197,10 @@ def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.2,img_loc="
         y_train = y_train[filt_train]    
         y_test = y_test[filt_test]
 
-        return X_train, X_test, y_train, y_test
+        if cache_all:
+            return X_train, X_test, y_train, y_test, classes
+        else:
+            return np.array(X_train), np.array(X_test), y_train, y_test
     else:
         print("Dataset not found")
         exit()
@@ -291,8 +305,8 @@ class CIFAR10Dataset(Dataset):
         
         return self
 
-# Dataset Class for the AdverseWeather and BDD Datasets
-class AdverseWeatherDataset(Dataset):
+# Dataset Class for the AdversarialWeather and BDD Datasets
+class AdversarialWeatherDataset(Dataset):
     def __init__(self,X,y,transform=None,cache_all=False):
         if cache_all:
             self.img_locs = X.numpy()

@@ -490,6 +490,10 @@ class Sim:
         self.unc_type = params["unc_type"]
         self.sim_type = sim_type
         self.dataset_type = params["dataset_type"]
+        self.dirichlet_alpha = params["dirichlet_alpha"]
+        self.dirichlet = params["dirichlet"]
+        self.dirichlet_base = params["dirichlet_base"]
+        self.dirichlet_base_alpha = params["dirichlet_base_alpha"]
 
         self.params = params
         self.loss_fn = nn.CrossEntropyLoss()
@@ -516,7 +520,10 @@ class Sim:
         np.random.seed(seed)
         
         inds = list()
-        x_dist = np.random.rand(len(base_classes))
+        if self.dirichlet_base:
+            x_dist = np.random.dirichlet(np.repeat(self.dirichlet_base_alpha,len(base_classes)))
+        else:
+            x_dist = np.random.rand(len(base_classes))
         x_dist = x_dist / sum(x_dist)
         
         N_x = [0 for i in range(len(base_classes))]
@@ -565,10 +572,14 @@ class Sim:
         np.random.seed(sim_i)
 
         x_dist = np.zeros((self.n_device,self.n_class))
-        for i in range(self.n_device):
-            for j in obs_clss[i]:
-                x_dist[i,j] = np.random.rand()
-        
+        if self.dirichlet:
+            for i in range(self.n_device):
+                x_dist[i,:] = np.random.dirichlet(np.repeat(self.dirichlet_alpha,self.n_class))
+        else:
+            for i in range(self.n_device):
+                for j in obs_clss[i]:
+                    x_dist[i,j] = np.random.rand()
+            
         x_dist = x_dist / np.sum(x_dist,1).reshape(-1,1)
 
         N_x_lims = np.zeros((self.n_class,1),int)
@@ -634,7 +645,7 @@ class Sim:
             trfm.ToTensor(),
             trfm.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
             ])
-            dataset = AdverseWeatherDataset(X,y,self.params.cache_all)
+            dataset = AdversarialWeatherDataset(X,y,transform,self.params["cache_all"])
         return dataset
 
     # Creates dataset for training
@@ -659,7 +670,7 @@ class Sim:
             trfm.ToTensor(),
             trfm.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
             ])
-            dataset = AdverseWeatherDataset(X,y,transform,self.params.cache_all)
+            dataset = AdversarialWeatherDataset(X,y,transform,self.params["cache_all"])
 
         return dataset
 
@@ -844,10 +855,10 @@ class Sim:
             self.dataset_ind[sim_seed].append(self.dataset_ind[sim_seed][-1] + cached_inds)
 
             self.reset_model()
-            trainset = self.create_traindataset(X_train[list(set(self.dataset_ind[self.sim_seed][-1]))],y_train[list(set(self.dataset_ind[self.sim_seed][-1]))])
-            train_model(self.model,trainset)
+            trainset = self.create_traindataset(X_train[tuple([list(set(self.dataset_ind[self.sim_seed][-1]))])],y_train[tuple([list(set(self.dataset_ind[self.sim_seed][-1]))])])
+            train_model(self.model,trainset,converge=self.params["converge"])
 
-            self.accs[sim_i,round_i+1] = test_model(self.model,testset)
+            self.accs[sim_i,round_i+1] = test_model(self.model,testset,self.test_b_size)
 
     def save_infos(self,save_loc,sim_type):
 
