@@ -11,10 +11,18 @@ from utils.model_utils import *
 from utils.sim_utils import *
 from utils.plotting_utils import *
 
-
 def run_sim(opt,device):
 
     X_train,X_test,y_train,y_test = load_datasets(opt.dataset_loc,opt.dataset_type)
+
+    if opt.unc_type == "clip":
+        if opt.dataset_type == "AdversarialWeather":
+            embs = np.load(opt.clip_emb_loc+"/clip_embs.npy")
+            train_embs = {i: embs[i] for i in X_train.keys()}
+        else:
+            train_embs = np.load(opt.clip_emb_loc+"/train_embs.npy",allow_pickle=True).item()
+    else:
+        train_embs = None
 
     n_class = len(np.unique(y_train))
 
@@ -95,9 +103,9 @@ def run_sim(opt,device):
                 
             obs_inds = Distributed_Model.create_obs_ind(N_x,y_train,trial_i*simcoef_int+simsum_int)
 
-            Distributed_Model.sim_round(0,trial_i*simcoef_int+simsum_int,X_train,y_train,test_data,base_inds,obs_inds)
-            Oracle_Model.sim_round(0,trial_i*simcoef_int+simsum_int,X_train,y_train,test_data,base_inds,obs_inds)
-            Interactive_Model.sim_round(0,trial_i*simcoef_int+simsum_int,X_train,y_train,test_data,base_inds,obs_inds)
+            Distributed_Model.sim_round(0,trial_i*simcoef_int+simsum_int,X_train,y_train,test_data,base_inds,obs_inds,train_embs)
+            Oracle_Model.sim_round(0,trial_i*simcoef_int+simsum_int,X_train,y_train,test_data,base_inds,obs_inds,train_embs)
+            Interactive_Model.sim_round(0,trial_i*simcoef_int+simsum_int,X_train,y_train,test_data,base_inds,obs_inds,train_embs)
             
             Distributed_Model.save_infos(trial_loc,"Distributed")
             Oracle_Model.save_infos(trial_loc,"Oracle")
@@ -109,37 +117,37 @@ def run_sim(opt,device):
 
         combine_sims(run_ids,run_i_loc,run_i_loc,["Distributed","Oracle","Interactive"],name="trial")
 
-
 if __name__ == "__main__":
 
     # Runs the simulation for the MNIST dataset
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset-loc", type=str,default="/store/datasets")
-    parser.add_argument("--gpu-no", type=int,default=4)
-    parser.add_argument("--n-device", type=int, default=20)
-    parser.add_argument("--n-sim", type=int, default=2)
+    parser.add_argument("--dataset-loc", type=str,default="/store/datasets/CIFAR10")
+    parser.add_argument("--clip-emb-loc", type=str, default= "/store/datasets/CIFAR10")
+    parser.add_argument("--gpu-no", type=int,default=0)
+    parser.add_argument("--n-device", type=int, default=50)
+    parser.add_argument("--n-sim", type=int, default=1)
     parser.add_argument("--n-rounds", type=int, default=5)
-    parser.add_argument("--n-epoch", type=int, default=200)
-    parser.add_argument("--b-size", type=int, default=4)
+    parser.add_argument("--n-epoch", type=int, default=100)
+    parser.add_argument("--b-size", type=int, default=512)
     parser.add_argument("--init-sim", type=int, default=0) 
     parser.add_argument("--n_iter", type=int, default=3)
     parser.add_argument("--n-class", type=int, default=10)
-    parser.add_argument("--test-b-size", type=int, default=8)
-    parser.add_argument("--lr", type=float, default=0.005)
-    parser.add_argument("--n-size", type=int, default=30)
-    parser.add_argument("--n-obs", type=int, default=1000)
-    parser.add_argument("--n-cache", type=int, default=2)
-    parser.add_argument("--run-loc", type=str, default="./runs/MNIST")
-    parser.add_argument("--n-trial",type=int, default=2)
+    parser.add_argument("--test-b-size", type=int, default=1024)
+    parser.add_argument("--lr", type=float, default=0.1)
+    parser.add_argument("--n-size", type=int, default=2000)
+    parser.add_argument("--n-obs", type=int, default=4000)
+    parser.add_argument("--n-cache", type=int, default=10)
+    parser.add_argument("--run-loc", type=str, default="./runs/CIFAR10")
+    parser.add_argument("--n-trial",type=int, default=5)
     parser.add_argument("--init-trial",type=int, default=0)
-    parser.add_argument("--unc-type",type=str, default="badge")
-    parser.add_argument("--dataset-type",type=str, default="MNIST")
+    parser.add_argument("--unc-type",type=str, default="clip")
+    parser.add_argument("--dataset-type",type=str, default="CIFAR10")
     parser.add_argument("--converge-train",type=bool, default=True)
     parser.add_argument("--cache-all",type=bool, default=False)
     parser.add_argument("--dirichlet",type=bool, default=True)
     parser.add_argument("--dirichlet-base",type=bool, default=True)
-    parser.add_argument("--dirichlet-alpha",type=float, default=1)
+    parser.add_argument("--dirichlet-alpha",type=float, default=2.5)
     parser.add_argument("--dirichlet-base-alpha",type=float, default=5)
 
 

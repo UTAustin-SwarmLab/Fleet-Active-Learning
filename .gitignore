@@ -3,3 +3,4 @@
 *.jpeg
 runs/
 conv_opt/
+*.pyc

@@ -795,6 +795,34 @@ class Sim:
 
         return embeddings, base_embeddings
 
+    def clip_obtain_embeddings(self,X_train,y_train,obs_inds,base_inds,train_embs):
+        
+        emb_size = 1024
+        embeddings = np.zeros((self.n_device,len(obs_inds[0]),emb_size))
+        base_embeddings = np.zeros((len(base_inds),emb_size))
+
+        if self.dataset_type == "CIFAR10":  
+            for i in range(self.n_device):
+                for j in range(len(embeddings[0])):
+                    embeddings[i][j] = train_embs[obs_inds[i][j]]
+            for i in range(len(base_embeddings)):
+                base_embeddings[i] = train_embs[base_inds[i]]
+        elif self.dataset_type == "AdversarialWeather":
+            for i in range(self.n_device):
+                for j in range(len(embeddings[0])):
+                    embeddings[i][j] = train_embs[X_train[obs_inds[i][j]]]
+            for i in range(len(base_embeddings)):
+                base_embeddings[i][j] = train_embs[X_train[base_inds[i]]]
+        
+        elif self.dataset_type == "DeepDrive":
+            for i in range(self.n_device):
+                for j in range(len(embeddings)):
+                    embeddings[i][j] = train_embs[X_train[obs_inds[i][j]]]
+            for i in range(len(base_embeddings)):
+                base_embeddings[i] = train_embs[X_train[base_inds[i]]]
+        
+        return embeddings, base_embeddings
+
     def cache_inds(self,all_inds,obs_inds,unc_scores):
         cached_inds = list()
         for i in range(self.n_device):
@@ -812,7 +840,7 @@ class Sim:
         elif self.dataset_type == "AdversarialWeather" or self.dataset_type == "DeepDrive":
             self.model.apply(init_weights)
 
-    def sim_round(self,sim_i,sim_seed,X_train,y_train,testset,base_inds,obs_ind):
+    def sim_round(self,sim_i,sim_seed,X_train,y_train,testset,base_inds,obs_ind,train_embs):
 
         self.sim_i = sim_i
         self.sim_seed = sim_seed
@@ -847,6 +875,8 @@ class Sim:
                     embeddings,base_embeddings = self.coreset_obtain_embeddings(X_train,y_train,obs_ind[round_i],self.dataset_ind[sim_seed][-1])
                 elif self.unc_type == "badge":
                     embeddings,base_embeddings = self.badge_obtain_embeddings(X_train,y_train,obs_ind[round_i],self.dataset_ind[sim_seed][-1])
+                elif self.unc_type == "clip":
+                    embeddings,base_embeddings = self.clip_obtain_embeddings(X_train,y_train,obs_ind[round_i],self.dataset_ind[sim_seed][-1],train_embs)
 
                 sampling_policy = kCenterGreedy(embeddings,base_embeddings,obs_ind[round_i],self.n_iter,self.n_cache)
 
