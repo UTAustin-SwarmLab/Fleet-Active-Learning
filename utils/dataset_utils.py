@@ -85,7 +85,7 @@ def create_AdversarialWeather_dataset(X,y,cache_all=False):
     return dataset
 
 # Function to Load Dataset
-def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.2,img_loc="/store/datasets/bdd100k/images_resized/100k") -> tuple:
+def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.125,img_loc="/store/datasets/bdd100k/images_resized/100k") -> tuple:
     """
     :param save_dir: directory to save the dataset
     :param type: type of dataset to load
@@ -105,10 +105,10 @@ def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.2,img_loc="
         trainset = datasets.CIFAR10(root=save_dir, train=True, download=True)
         testset = datasets.CIFAR10(root=save_dir, train=False, download=True)
     elif type == "AdversarialWeather":
-        with open(save_dir+"/weather_labels.yml","r") as file:
-            weather_labels = yaml.safe_load(file)
-        with open(save_dir+"/daytime_labels.yml","r") as file:
-            daytime_labels = yaml.safe_load(file)
+        with open(save_dir+"/weather_labels.json","r") as file:
+            weather_labels = json.load(file)
+        with open(save_dir+"/daytime_labels.json","r") as file:
+            daytime_labels = json.load(file)
         
         img_locs = list(daytime_labels.keys())
 

@@ -17,8 +17,9 @@ def run_sim(opt,device):
 
     if opt.unc_type == "clip":
         if opt.dataset_type == "AdversarialWeather":
-            embs = np.load(opt.clip_emb_loc+"/clip_embs.npy")
-            train_embs = {i: embs[i] for i in X_train.keys()}
+            embs = np.load(opt.clip_emb_loc+"/clip_embs.npy",allow_pickle=True).item()
+            train_embs = {"/".join(X_train[i].split("/")[-4:]): embs["/".join(X_train[i].split("/")[-4:])]
+                           for i in  range(len(X_train))}
         else:
             train_embs = np.load(opt.clip_emb_loc+"/train_embs.npy",allow_pickle=True).item()
     else:
@@ -54,9 +55,9 @@ def run_sim(opt,device):
 
 
     base_classes =  [i for i in range(params["n_class"])]
-    sim_bar = tqdm(range(opt.init_sim, opt.init_sim+opt.n_sim),total=opt.n_sim)
+    pbar = tqdm(total=opt.n_sim*opt.n_rounds)
 
-    for sim_i in sim_bar:
+    for sim_i in range(opt.init_sim, opt.init_sim+opt.n_sim):
 
         run_i_loc = create_run_dir(opt.run_loc)
 
@@ -76,7 +77,8 @@ def run_sim(opt,device):
         base_inds = Unc_Model.dataset_ind[sim_i]
 
         initial_dataset = Unc_Model.create_traindataset(X_train[tuple(Unc_Model.dataset_ind[sim_i])],y_train[tuple(Unc_Model.dataset_ind[sim_i])])
-
+        
+        pbar.set_description("Training initial model")
         train_model(Unc_Model.model,initial_dataset,converge=opt.converge_train)
 
         accs = test_model(Unc_Model.model,test_data,opt.test_b_size)
@@ -103,46 +105,50 @@ def run_sim(opt,device):
                 
             obs_inds = Distributed_Model.create_obs_ind(N_x,y_train,trial_i*simcoef_int+simsum_int)
 
+            pbar.set_description("Running Distributed")
             Distributed_Model.sim_round(0,trial_i*simcoef_int+simsum_int,X_train,y_train,test_data,base_inds,obs_inds,train_embs)
+            pbar.set_description("Running Oracle")
             Oracle_Model.sim_round(0,trial_i*simcoef_int+simsum_int,X_train,y_train,test_data,base_inds,obs_inds,train_embs)
+            pbar.set_description("Running Interactive")
             Interactive_Model.sim_round(0,trial_i*simcoef_int+simsum_int,X_train,y_train,test_data,base_inds,obs_inds,train_embs)
             
+            pbar.set_description("Saving results")
             Distributed_Model.save_infos(trial_loc,"Distributed")
             Oracle_Model.save_infos(trial_loc,"Oracle")
             Interactive_Model.save_infos(trial_loc,"Interactive")
         
             plot_accs([Distributed_Model.accs,Oracle_Model.accs,Interactive_Model.accs],["Distributed","Oracle","Interactive"],trial_loc+"/Accs.jpg")
+            pbar.update(1)
 
+        pbar.set_description("Combining results")
         run_ids = [i for i in range(opt.n_trial)]
 
         combine_sims(run_ids,run_i_loc,run_i_loc,["Distributed","Oracle","Interactive"],name="trial")
 
 if __name__ == "__main__":
 
-    # Runs the simulation for the MNIST dataset
-
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset-loc", type=str,default="/store/datasets/CIFAR10")
-    parser.add_argument("--clip-emb-loc", type=str, default= "/store/datasets/CIFAR10")
+    parser.add_argument("--dataset-loc", type=str,default="/store/datasets/AdversarialWeather")
+    parser.add_argument("--clip-emb-loc", type=str, default= "/store/datasets/AdversarialWeather")
     parser.add_argument("--gpu-no", type=int,default=0)
-    parser.add_argument("--n-device", type=int, default=50)
+    parser.add_argument("--n-device", type=int, default=20)
     parser.add_argument("--n-sim", type=int, default=1)
     parser.add_argument("--n-rounds", type=int, default=5)
-    parser.add_argument("--n-epoch", type=int, default=100)
-    parser.add_argument("--b-size", type=int, default=512)
+    parser.add_argument("--n-epoch", type=int, default=200)
+    parser.add_argument("--b-size", type=int, default=64)
     parser.add_argument("--init-sim", type=int, default=0) 
     parser.add_argument("--n_iter", type=int, default=3)
     parser.add_argument("--n-class", type=int, default=10)
-    parser.add_argument("--test-b-size", type=int, default=1024)
+    parser.add_argument("--test-b-size", type=int, default=256)
     parser.add_argument("--lr", type=float, default=0.1)
-    parser.add_argument("--n-size", type=int, default=2000)
-    parser.add_argument("--n-obs", type=int, default=4000)
-    parser.add_argument("--n-cache", type=int, default=10)
-    parser.add_argument("--run-loc", type=str, default="./runs/CIFAR10")
+    parser.add_argument("--n-size", type=int, default=100)
+    parser.add_argument("--n-obs", type=int, default=2000)
+    parser.add_argument("--n-cache", type=int, default=2)
+    parser.add_argument("--run-loc", type=str, default="./runs/AdversarialWeather")
     parser.add_argument("--n-trial",type=int, default=5)
     parser.add_argument("--init-trial",type=int, default=0)
-    parser.add_argument("--unc-type",type=str, default="clip")
-    parser.add_argument("--dataset-type",type=str, default="CIFAR10")
+    parser.add_argument("--unc-type",type=str, default="coreset")
+    parser.add_argument("--dataset-type",type=str, default="AdversarialWeather")
     parser.add_argument("--converge-train",type=bool, default=True)
     parser.add_argument("--cache-all",type=bool, default=False)
     parser.add_argument("--dirichlet",type=bool, default=True)

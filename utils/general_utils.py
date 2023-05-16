@@ -37,16 +37,16 @@ from utils.plotting_utils import *
 # Combines multiple trials 
 def combine_sims(run_ids,run_loc,target_run_loc,sim_types,name="run"):
 
-    with open(run_loc+"/"+name+str(run_ids[0])+"/"+sim_types[0]+"_params.yml") as f:
-        params = yaml.safe_load(f)
+    with open(run_loc+"/"+name+str(run_ids[0])+"/"+sim_types[0]+"_params.json") as f:
+        params = json.load(f)
 
     Acc = dict()
 
     for sim_type in sim_types:
 
         params = dict()
-        with open(run_loc+"/"+name+str(run_ids[0])+"/"+sim_type+"_params.yml") as f:
-            params = yaml.safe_load(f)
+        with open(run_loc+"/"+name+str(run_ids[0])+"/"+sim_type+"_params.json") as f:
+            params = json.load(f)
         seeds = list()
         obs_ind = dict()
         dataset_ind = dict()
@@ -56,15 +56,15 @@ def combine_sims(run_ids,run_loc,target_run_loc,sim_types,name="run"):
         for i,run_i in enumerate(run_ids):
             
 
-            with open(run_loc+"/"+name+str(run_i)+"/"+sim_type+"_params.yml") as f:
-                new_params = yaml.safe_load(f)
+            with open(run_loc+"/"+name+str(run_i)+"/"+sim_type+"_params.json") as f:
+                new_params = json.load(f)
             
             if new_params != params:
                 print("Error in run"+str(run_i)+". Params don't match.")
                 continue
 
-            with open(run_loc+"/"+name+str(run_i)+"/"+sim_type+"_seeds.yml") as f:
-                new_seed = yaml.safe_load(f)
+            with open(run_loc+"/"+name+str(run_i)+"/"+sim_type+"_seeds.json") as f:
+                new_seed = json.load(f)
             
             if any(s in seeds for s in new_seed):
                 print("Error in run"+str(run_i)+". The sim seed is already added.")
@@ -72,29 +72,29 @@ def combine_sims(run_ids,run_loc,target_run_loc,sim_types,name="run"):
             else:
                 seeds += new_seed
             tot_sim += 1
-            with open(run_loc+"/"+name+str(run_i)+"/"+sim_type+"_obs_ind.yml") as f:
-                new_obs_ind = yaml.safe_load(f)
+            with open(run_loc+"/"+name+str(run_i)+"/"+sim_type+"_obs_ind.json") as f:
+                new_obs_ind = json.load(f)
             obs_ind.update(new_obs_ind)
 
-            with open(run_loc+"/"+name+str(run_i)+"/"+sim_type+"_dataset_ind.yml") as f:
-                new_dataset_ind = yaml.safe_load(f)
+            with open(run_loc+"/"+name+str(run_i)+"/"+sim_type+"_dataset_ind.json") as f:
+                new_dataset_ind = json.load(f)
             dataset_ind.update(new_dataset_ind)
 
             Acc[sim_type][i,:] = np.load(run_loc+"/"+name+str(run_i)+"/"+sim_type+"_acc.npy")
         
         params["n_sim"] = tot_sim
         
-        with open(target_run_loc+'/'+sim_type+'_params.yml', 'w') as outfile:
-            yaml.dump(params, outfile, default_flow_style=False)
+        with open(target_run_loc+'/'+sim_type+'_params.json', 'w') as outfile:
+            json.dump(params, outfile)
 
-        with open(target_run_loc+'/'+sim_type+'_obs_ind.yml', 'w') as outfile:
-            yaml.dump(obs_ind, outfile, default_flow_style=False)
+        with open(target_run_loc+'/'+sim_type+'_obs_ind.json', 'w') as outfile:
+            json.dump(obs_ind, outfile)
 
-        with open(target_run_loc+'/'+sim_type+'_dataset_ind.yml', 'w') as outfile:
-            yaml.dump(dataset_ind, outfile, default_flow_style=False)
+        with open(target_run_loc+'/'+sim_type+'_dataset_ind.json', 'w') as outfile:
+            json.dump(dataset_ind, outfile)
 
-        with open(target_run_loc+'/'+sim_type+'_seeds.yml', 'w') as outfile:
-            yaml.dump(seeds, outfile, default_flow_style=False)
+        with open(target_run_loc+'/'+sim_type+'_seeds.json', 'w') as outfile:
+            json.dump(seeds, outfile)
 
         with open(target_run_loc+'/'+sim_type+'_acc.npy', 'wb') as outfile:
             np.save(outfile, Acc[sim_type])
