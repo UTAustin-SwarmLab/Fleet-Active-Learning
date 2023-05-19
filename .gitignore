@@ -4,3 +4,5 @@
 runs/
 conv_opt/
 *.pyc
+plots/
+logs/

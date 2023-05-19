@@ -13,7 +13,7 @@ from utils.plotting_utils import *
 
 def run_sim(opt,device):
 
-    X_train,X_test,y_train,y_test = load_datasets(opt.dataset_loc,opt.dataset_type)
+    X_train,X_test,y_train,y_test = load_datasets(opt.dataset_loc,opt.dataset_type,img_loc=opt.img_loc)
 
     if opt.unc_type == "clip":
         if opt.dataset_type == "AdversarialWeather":
@@ -31,7 +31,9 @@ def run_sim(opt,device):
 
     params = dict()
    
-    params["n_device"] = opt.n_device
+    params["n_device"] = opt.n_unique_device * opt.n_same_device
+    params["n_unique_device"] = opt.n_unique_device
+    params["n_same_device"] = opt.n_same_device
     params["n_sim"] = 1
     params["n_rounds"] = opt.n_rounds
     params["n_epoch"] = opt.n_epoch
@@ -53,9 +55,8 @@ def run_sim(opt,device):
     params["dirichlet_base"] = opt.dirichlet_base
     params["dirichlet_base_alpha"] = opt.dirichlet_base_alpha
 
-
     base_classes =  [i for i in range(params["n_class"])]
-    pbar = tqdm(total=opt.n_sim*opt.n_rounds)
+    pbar = tqdm(total=opt.n_sim*opt.n_trial)
 
     for sim_i in range(opt.init_sim, opt.init_sim+opt.n_sim):
 
@@ -128,34 +129,35 @@ def run_sim(opt,device):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset-loc", type=str,default="/store/datasets/AdversarialWeather")
-    parser.add_argument("--clip-emb-loc", type=str, default= "/store/datasets/AdversarialWeather")
-    parser.add_argument("--gpu-no", type=int,default=0)
-    parser.add_argument("--n-device", type=int, default=20)
+    parser.add_argument("--dataset-loc", type=str,default="/store/datasets/CIFAR10")
+    parser.add_argument("--img-loc", type=str,default="/store/datasets/CIFAR10")
+    parser.add_argument("--clip-emb-loc", type=str, default= "/store/datasets/CIFAR10")
+    parser.add_argument("--gpu-no", type=int,default=4)
+    parser.add_argument("--n-unique-device", type=int, default=10)
+    parser.add_argument("--n-same-device", type=int, default=3)
     parser.add_argument("--n-sim", type=int, default=1)
-    parser.add_argument("--n-rounds", type=int, default=5)
+    parser.add_argument("--n-rounds", type=int, default=20)
     parser.add_argument("--n-epoch", type=int, default=200)
-    parser.add_argument("--b-size", type=int, default=64)
+    parser.add_argument("--b-size", type=int, default=512)
     parser.add_argument("--init-sim", type=int, default=0) 
     parser.add_argument("--n_iter", type=int, default=3)
     parser.add_argument("--n-class", type=int, default=10)
-    parser.add_argument("--test-b-size", type=int, default=256)
+    parser.add_argument("--test-b-size", type=int, default=1024)
     parser.add_argument("--lr", type=float, default=0.1)
-    parser.add_argument("--n-size", type=int, default=100)
+    parser.add_argument("--n-size", type=int, default=300)
     parser.add_argument("--n-obs", type=int, default=2000)
-    parser.add_argument("--n-cache", type=int, default=2)
-    parser.add_argument("--run-loc", type=str, default="./runs/AdversarialWeather")
+    parser.add_argument("--n-cache", type=int, default=20)
+    parser.add_argument("--run-loc", type=str, default="./runs/CIFAR10")
     parser.add_argument("--n-trial",type=int, default=5)
     parser.add_argument("--init-trial",type=int, default=0)
-    parser.add_argument("--unc-type",type=str, default="coreset")
-    parser.add_argument("--dataset-type",type=str, default="AdversarialWeather")
-    parser.add_argument("--converge-train",type=bool, default=True)
-    parser.add_argument("--cache-all",type=bool, default=False)
-    parser.add_argument("--dirichlet",type=bool, default=True)
-    parser.add_argument("--dirichlet-base",type=bool, default=True)
-    parser.add_argument("--dirichlet-alpha",type=float, default=2.5)
+    parser.add_argument("--unc-type",type=str, default="clip")
+    parser.add_argument("--dataset-type",type=str, default="CIFAR10")
+    parser.add_argument("--converge-train",type=int, default=1)
+    parser.add_argument("--cache-all",type=int, default=0)
+    parser.add_argument("--dirichlet",type=int, default=1)
+    parser.add_argument("--dirichlet-base",type=int, default=1)
+    parser.add_argument("--dirichlet-alpha",type=float, default=1)
     parser.add_argument("--dirichlet-base-alpha",type=float, default=5)
-
 
     opt = parser.parse_args()
 

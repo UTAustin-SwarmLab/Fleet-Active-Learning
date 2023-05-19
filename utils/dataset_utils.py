@@ -112,6 +112,8 @@ def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.125,img_loc
         
         img_locs = list(daytime_labels.keys())
 
+        img_locs = list(map(lambda x:img_loc+"/"+x,img_locs))
+
         if cache_all:
             w = 455
             h = 256    
@@ -123,7 +125,8 @@ def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.125,img_loc
         else:
             X = img_locs
 
-        y = ["".join(weather_labels[x])+daytime_labels[x] for x in img_locs]
+        get_key = lambda x: "/".join(x.split("/")[-4:])
+        y = ["".join(weather_labels[get_key(x)])+daytime_labels[get_key(x)] for x in img_locs]
 
         classes = list(set(y))
 

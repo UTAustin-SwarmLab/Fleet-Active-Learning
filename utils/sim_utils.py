@@ -192,10 +192,12 @@ class Sim:
 
         for round_i in range(self.n_rounds):
             obs_ind[round_i] = [[] for i in range(self.n_device)]
-            for dev_i in range(self.n_device):
+            for dev_i in range(self.params["n_unique_device"]):
                 for i in range(self.n_class):
                     ind_s = random.sample(np.argwhere(y == i).tolist()[0], k = N_x[dev_i][i])
-                    obs_ind[round_i][dev_i].extend(ind_s)
+                    obs_ind[round_i][dev_i*self.params["n_same_device"]].extend(ind_s)
+                for same_i in range(1,self.params["n_same_device"]):
+                    obs_ind[round_i][dev_i*self.params["n_same_device"]+same_i] = obs_ind[round_i][dev_i*self.params["n_same_device"]].copy()
         
         return obs_ind
 
@@ -292,67 +294,35 @@ class Sim:
 
         return logits
 
-    def coreset_obtain_embeddings(self,X_train,y_train,obs_inds,base_inds):
+    def coreset_obtain_embeddings(self,X_train,y_train,all_inds):
 
         self.model.eval()
 
-        embeddings = np.zeros((self.n_device,len(obs_inds[0]),self.model.emb_size))
-        base_embeddings = np.zeros((len(base_inds),self.model.emb_size))
+        embeddings = np.zeros((len(all_inds),self.model.emb_size))
 
         with torch.no_grad():
-            
-            for i in range(self.n_device):
 
-                dataset_i = self.create_dataset(X_train[obs_inds[i]],y_train[obs_inds[i]])
-                loader = torch.utils.data.DataLoader(dataset_i, batch_size=self.test_b_size, shuffle=False)
-                ind = 0
-                for x,_ in loader:
-                    x = x.to(self.device)
-                    out,emb = self.model(x)
-                    embeddings[i][ind:ind+len(x)] = emb.cpu().detach().numpy()
-                    ind += len(x)
-
-            dataset_i = self.create_dataset(X_train[base_inds],y_train[base_inds])
+            dataset_i = self.create_dataset(X_train[all_inds],y_train[all_inds])
             loader = torch.utils.data.DataLoader(dataset_i, batch_size=self.test_b_size, shuffle=False)
             ind = 0
             for x,_ in loader:
                 x = x.to(self.device)
                 out,emb = self.model(x)
-                base_embeddings[ind:ind+len(x)] = emb.cpu().detach().numpy()
+                embeddings[ind:ind+len(x)] = emb.cpu().detach().numpy()
                 ind += len(x)
         
-        return embeddings, base_embeddings
+        return embeddings
 
-    def badge_obtain_embeddings(self,X_train,y_train,obs_inds,base_inds):
+    def badge_obtain_embeddings(self,X_train,y_train,all_inds):
         
         emb_size = self.model.emb_size
         self.model.eval()
-        embeddings = np.zeros((self.n_device,len(obs_inds[0]),emb_size*self.n_class))
-        base_embeddings = np.zeros((len(base_inds),emb_size*self.n_class))
+        embeddings = np.zeros((len(all_inds),emb_size*self.n_class))
         m = torch.nn.Softmax(dim=1)
 
         with torch.no_grad():
-
-            for i in range(self.n_device):
-
-                dataset_i = self.create_dataset(X_train[obs_inds[i]],y_train[obs_inds[i]])
-                loader = torch.utils.data.DataLoader(dataset_i, batch_size=self.test_b_size, shuffle=False)
-                ind = 0
-                for x,_ in loader:
-                    x = x.to(self.device)
-                    out,emb = self.model(x)
-                    emb = emb.cpu().detach().numpy()
-                    y_preds = torch.argmax(out,1).cpu().detach().numpy()
-                    
-                    batchProbs = m(out).cpu().detach().numpy()
-
-                    for c in range(self.n_class):
-                         embeddings[i][ind:ind+len(x),emb_size * c : emb_size * (c+1)] = deepcopy(emb) * (-1 * batchProbs[:,c].reshape(-1,1))
-                         embeddings[i][ind:ind+len(x),emb_size * c : emb_size * (c+1)][y_preds == c] = deepcopy(emb)[y_preds == c] * (1 - batchProbs[:,c][y_preds == c].reshape(-1,1))
-
-                    ind += len(x)
             
-            dataset_i = self.create_dataset(X_train[base_inds],y_train[base_inds])
+            dataset_i = self.create_dataset(X_train[all_inds],y_train[all_inds])
             loader = torch.utils.data.DataLoader(dataset_i, batch_size=self.test_b_size, shuffle=False)
             ind = 0
             for x,_ in loader:
@@ -363,38 +333,44 @@ class Sim:
                 batchProbs = m(out).cpu().detach().numpy()
 
                 for c in range(self.n_class):
-                    base_embeddings[ind:ind+len(x),emb_size * c : emb_size * (c+1)] = deepcopy(emb) * (-1 * batchProbs[:,c].reshape(-1,1))
-                    base_embeddings[ind:ind+len(x),emb_size * c : emb_size * (c+1)][y_preds == c] = deepcopy(emb)[y_preds == c] * (1 - batchProbs[:,c][y_preds == c].reshape(-1,1))
+                    embeddings[ind:ind+len(x),emb_size * c : emb_size * (c+1)] = deepcopy(emb) * (-1 * batchProbs[:,c].reshape(-1,1))
+                    embeddings[ind:ind+len(x),emb_size * c : emb_size * (c+1)][y_preds == c] = deepcopy(emb)[y_preds == c] * (1 - batchProbs[:,c][y_preds == c].reshape(-1,1))
 
-        return embeddings, base_embeddings
+        return embeddings
 
-    def clip_obtain_embeddings(self,X_train,y_train,obs_inds,base_inds,train_embs):
+    def clip_obtain_embeddings(self,X_train,y_train,all_inds,train_embs):
         
         emb_size = 1024
-        embeddings = np.zeros((self.n_device,len(obs_inds[0]),emb_size))
-        base_embeddings = np.zeros((len(base_inds),emb_size))
+        embeddings = np.zeros((len(all_inds),emb_size))
 
         if self.dataset_type == "CIFAR10":  
-            for i in range(self.n_device):
-                for j in range(len(embeddings[0])):
-                    embeddings[i][j] = train_embs[obs_inds[i][j]]
-            for i in range(len(base_embeddings)):
-                base_embeddings[i] = train_embs[base_inds[i]]
+            for i in range(len(embeddings)):
+                embeddings[i] = train_embs[all_inds[i]]
         elif self.dataset_type == "AdversarialWeather":
-            for i in range(self.n_device):
-                for j in range(len(embeddings[0])):
-                    embeddings[i][j] = train_embs["/".join(X_train[obs_inds[i][j]].split("/")[-4:])]
-            for i in range(len(base_embeddings)):
-                base_embeddings[i] = train_embs["/".join(X_train[base_inds[i]].split("/")[-4:])]
+            for i in range(len(embeddings)):
+                embeddings[i] = train_embs["/".join(X_train[all_inds[i]].split("/")[-4:])]
         
         elif self.dataset_type == "DeepDrive":
-            for i in range(self.n_device):
-                for j in range(len(embeddings)):
-                    embeddings[i][j] = train_embs[X_train[obs_inds[i][j]]]
-            for i in range(len(base_embeddings)):
-                base_embeddings[i] = train_embs[X_train[base_inds[i]]]
+            for i in range(len(embeddings)):
+                embeddings[i] = train_embs[X_train[all_inds[i]].split("/")[-1]]
         
-        return embeddings, base_embeddings
+        return embeddings
+
+    def map_embeddings_devices(self,embeddings,all_inds,obs_inds,base_inds):
+
+        embs = np.zeros((self.n_device,len(obs_inds[0]),embeddings.shape[1]))
+        base_embs = np.zeros((len(base_inds),embeddings.shape[1]))
+
+        for i in range(self.n_device):
+            
+            for j in range(len(obs_inds[i])):
+
+                embs[i][j] = embeddings[all_inds.index(obs_inds[i][j])]
+            
+        for j in range(len(base_inds)):
+            base_embs[j] = embeddings[all_inds.index(base_inds[j])]
+
+        return embs,base_embs
 
     def cache_inds(self,all_inds,obs_inds,unc_scores):
         cached_inds = list()
@@ -444,12 +420,25 @@ class Sim:
                 cached_inds = self.cache_inds(all_indices,obs_ind[round_i],scores)
             
             else:
+
+                # Obtains unique indices for all devices
+                all_indices = list()
+                for i in range(self.n_device):
+                    all_indices.extend(obs_ind[round_i][i])
+                all_indices.extend(self.dataset_ind[sim_seed][-1])
+                
+                all_indices = list(set(all_indices))
+
+                # Obtains embeddings for these unique indices
+
                 if self.unc_type == "coreset":
-                    embeddings,base_embeddings = self.coreset_obtain_embeddings(X_train,y_train,obs_ind[round_i],self.dataset_ind[sim_seed][-1])
+                    embeddings = self.coreset_obtain_embeddings(X_train,y_train,all_indices)
                 elif self.unc_type == "badge":
-                    embeddings,base_embeddings = self.badge_obtain_embeddings(X_train,y_train,obs_ind[round_i],self.dataset_ind[sim_seed][-1])
+                    embeddings = self.badge_obtain_embeddings(X_train,y_train,all_indices)
                 elif self.unc_type == "clip":
-                    embeddings,base_embeddings = self.clip_obtain_embeddings(X_train,y_train,obs_ind[round_i],self.dataset_ind[sim_seed][-1],train_embs)
+                    embeddings = self.clip_obtain_embeddings(X_train,y_train,all_indices,train_embs)
+
+                embeddings, base_embeddings = self.map_embeddings_devices(embeddings,all_indices,obs_ind[round_i],self.dataset_ind[sim_seed][-1])
 
                 sampling_policy = kCenterGreedy(embeddings,base_embeddings,obs_ind[round_i],self.n_iter,self.n_cache)
 
@@ -479,3 +468,8 @@ class Sim:
 
         with open(save_loc+'/'+sim_type+'_acc.npy', 'wb') as outfile:
             np.save(outfile, self.accs)
+    
+    def save_params(self,save_loc,sim_type):
+
+        with open(save_loc+'/'+sim_type+'_params.json', 'w') as outfile:
+            json.dump(self.params, outfile)

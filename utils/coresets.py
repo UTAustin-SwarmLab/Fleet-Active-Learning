@@ -17,8 +17,11 @@ class kCenterGreedy:
         self.n_obs = self.features[0].shape[0]
         self.already_selected = []
         self.n_iter = n_iter
-        dists_w_all = pairwise_distances(np.concatenate(self.features, axis=0), base_features, metric=self.metric)
-        self.dists = np.min(dists_w_all, axis=1).reshape(-1,1)
+        if base_features.shape[0] == 0:
+            self.dists = np.ones((self.n_obs*self.n_device,1))*np.inf
+        else:
+            dists_w_all = pairwise_distances(np.concatenate(self.features, axis=0), base_features, metric=self.metric)
+            self.dists = np.min(dists_w_all, axis=1).reshape(-1,1)
 
     def distributed_coreset(self):
         """
@@ -119,6 +122,11 @@ class kCenterGreedy:
                 for k in range(self.n_cache):
 
                     ind = np.argmax(dists*mask) - j*self.n_obs
+
+                    if ind < 0:
+                        ind = 0
+                        while self.inds[j][ind] in cache_inds:
+                            ind += 1
 
                     cache_inds.append(self.inds[j][ind])
 

@@ -26,7 +26,7 @@ def init_weights(m):
         nn.init.constant_(m.bias.data, 0.01)
 
 # Function to get model accuracy
-def test_model(model,test_dataset,b_size:int=100):
+def test_model(model,test_dataset,b_size:int=100,class_normalized:bool=True) -> float:
     """
     Tests the model on the test dataset
     :param model: Model to be tested
@@ -36,15 +36,24 @@ def test_model(model,test_dataset,b_size:int=100):
     """
     model.eval()
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=b_size)
-    correct = 0
-    total = 0
+    correct = [0 for i in range(model.n_class)]
+    total = [0 for i in range(model.n_class)]
+
     with torch.no_grad():
         for x,y in test_loader:
             out, _ = model(x.to(model.device))
             _, pred = torch.max(out.data, 1)
-            total += y.size(0)
-            correct += (pred == y.to(model.device)).sum().item()
-    return correct/total
+            for i in range(model.n_class):
+                pred_i = pred == i
+                y_i = y == i
+                total[i] += y_i.sum().item()
+                correct[i] += (pred_i.cpu() & y_i).sum().item()
+
+    if class_normalized:
+        ratios = [correct[i]/total[i] for i in range(model.n_class)]
+        return sum(ratios)/len(ratios)
+    else:
+        return sum(correct)/sum(total)
 
 # Function to train model
 def train_model(model,train_dataset,silent:bool=True,converge:bool=False):
@@ -136,7 +145,7 @@ def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,
     if model_name == "MNIST":
         model = MNISTClassifier()
     elif model_name == "CIFAR10":
-        model = CifarResNet(BasicBlock,[5]*3)
+        model = CifarResNet(BasicBlock,[2]*4)
     elif model_name == "AdversarialWeather" or model_name == "DeepDrive":
         model = AdversarialWeatherResNet([2]*4,num_classes=n_class)
     else:
@@ -151,6 +160,7 @@ def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,
     model.b_size = b_size
     model.n_epoch = n_epoch
     model.lr = lr
+    model.n_class = n_class
 
     return model
 
