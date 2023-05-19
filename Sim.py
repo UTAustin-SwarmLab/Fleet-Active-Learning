@@ -54,6 +54,7 @@ def run_sim(opt,device):
     params["dirichlet"] = opt.dirichlet
     params["dirichlet_base"] = opt.dirichlet_base
     params["dirichlet_base_alpha"] = opt.dirichlet_base_alpha
+    params["cache_in_first"] = opt.cache_in_first
 
     base_classes =  [i for i in range(params["n_class"])]
     pbar = tqdm(total=opt.n_sim*opt.n_trial)
@@ -158,6 +159,7 @@ if __name__ == "__main__":
     parser.add_argument("--dirichlet-base",type=int, default=1)
     parser.add_argument("--dirichlet-alpha",type=float, default=1)
     parser.add_argument("--dirichlet-base-alpha",type=float, default=5)
+    parser.add_argument("--cache-in-first",type=int, default=1)
 
     opt = parser.parse_args()
 

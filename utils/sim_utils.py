@@ -246,6 +246,7 @@ class Sim:
             trfm.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
             ])
             dataset = AdversarialWeatherDataset(X,y,transform,self.params["cache_all"])
+            dataset.set_use_cache(self.params["cache_in_first"])
 
         return dataset
 

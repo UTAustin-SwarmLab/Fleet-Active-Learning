@@ -318,6 +318,7 @@ class AdversarialWeatherDataset(Dataset):
         self.label = y
         self.transform = transform
         self.cache_all = cache_all
+        self.cached_flag = False
 
     def __len__(self):
         return len(self.label)
@@ -326,6 +327,8 @@ class AdversarialWeatherDataset(Dataset):
 
         if self.cache_all:
             x = Image.fromarray(self.img_locs[index])
+        elif self.cached_flag:
+            x = self.imgs[index]
         else:
             x = Image.open(self.img_locs[index])
         
@@ -342,4 +345,16 @@ class AdversarialWeatherDataset(Dataset):
         self.label = self.label.pin_memory()
         
         return self
+    
+    def set_use_cache(self, use_cache):
+
+        if use_cache:
+            self.imgs = [None for _ in range(len(self.img_locs))]
+            w = 455
+            h = 256  
+            for img_ind, img_loc in enumerate(self.img_locs):
+                self.imgs[img_ind] = Image.open(img_loc)
+            self.cached_flag = True
+        else:
+            self.imgs = None
     
