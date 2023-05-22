@@ -340,8 +340,8 @@ class Sim:
                 batchProbs = m(out).cpu().detach().numpy()
 
                 for c in range(self.n_class):
-                    embeddings[ind:ind+len(x),emb_size * c : emb_size * (c+1)] = deepcopy(emb) * (-1 * batchProbs[:,c].reshape(-1,1))
-                    embeddings[ind:ind+len(x),emb_size * c : emb_size * (c+1)][y_preds == c] = deepcopy(emb)[y_preds == c] * (1 - batchProbs[:,c][y_preds == c].reshape(-1,1))
+                    embeddings[ind:ind+len(x),emb_size * c : emb_size * (c+1)] = emb * (-1 * batchProbs[:,c].reshape(-1,1))
+                    embeddings[ind:ind+len(x),emb_size * c : emb_size * (c+1)][y_preds == c] = emb[y_preds == c] * (1 - batchProbs[:,c][y_preds == c].reshape(-1,1))
 
         return embeddings
 

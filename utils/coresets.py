@@ -33,9 +33,11 @@ class kCenterGreedy:
 
         cache_inds = []
 
+        dists = np.zeros((self.n_obs,1))
+
         for i in range(self.n_device):
 
-            dists = deepcopy(self.dists[i*(self.n_obs):(i+1)*(self.n_obs)])
+            dists[:] = self.dists[i*(self.n_obs):(i+1)*(self.n_obs)]
 
             cache_ind = []
 
@@ -67,7 +69,8 @@ class kCenterGreedy:
         for i in range(1, self.n_device):
             inds.extend(self.inds[i])
         
-        dists = deepcopy(self.dists)
+        dists = np.zeros((self.n_obs*self.n_device,1))
+        dists[:] = self.dists
 
         for j in range(self.n_cache * self.n_device):
             
