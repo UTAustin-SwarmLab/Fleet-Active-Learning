@@ -151,7 +151,8 @@ def train_model(model,train_dataset,silent:bool=True,converge:bool=False,only_fi
                 epoch += 1
     
 # Function to get model
-def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,lr:float=0.001,n_class:int=5):
+def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,lr:float=0.001,n_class:int=5,
+              use_embs:bool=False,n_features:int=2048):
     """
     Returns the model
     :param model_name: Name of the model
@@ -167,11 +168,13 @@ def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,
     elif model_name == "CIFAR10":
         model = CifarResNet(BasicBlock,[2]*4)
     elif model_name == "AdversarialWeather" or model_name == "DeepDrive":
-        #model = AdversarialWeatherResNet(output_layer="avgpool",n_class=n_class)
-        model = vsmodels.resnet50(pretrained=True)
-        num_features = model.fc.in_features
-        model.fc = FinalLayer(num_features, n_class)
-        model.emb_size = num_features
+        if use_embs:
+            model = FinalLayer(n_features, n_class)
+        else:
+            model = vsmodels.resnet50(pretrained=True)
+            num_features = model.fc.in_features
+            model.fc = nn.Linear(num_features,n_class)
+            model.emb_size = num_features
     else:
         raise ValueError("Model not found")
     

@@ -33,15 +33,18 @@ def filter_indices(X_train,indices):
         X_train = X_train[indices]
 
 # Function to load datasets
-def create_datasets(X,y,type,cache_all=False,cache_in_first=False):
+def create_datasets(X,y,type,cache_all=False,cache_in_first=False,use_embs=False):
 
     if type == "MNIST":
         dataset = create_MNIST_datasets(X,y)
     elif type == "CIFAR10":
         dataset = create_CIFAR10_datasets(X,y)
     elif type == "AdversarialWeather" or type == "DeepDrive":
-        dataset = create_AdversarialWeather_dataset(X,y,cache_all)
-        dataset.set_use_cache(cache_in_first)
+        if use_embs:
+            dataset = create_Embedding_dataset(X,y)
+        else:
+            dataset = create_AdversarialWeather_dataset(X,y,cache_all)
+            dataset.set_use_cache(cache_in_first)
     else:
         print("Dataset not found")
         exit()
@@ -85,8 +88,14 @@ def create_AdversarialWeather_dataset(X,y,cache_all=False):
     dataset = AdversarialWeatherDataset(X,y,transform,cache_all)
     return dataset
 
+# Create Embedding Dataset
+def create_Embedding_dataset(X,y):
+    dataset = EmbeddingDataset(X,y)
+    return dataset
+
 # Function to Load Dataset
-def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.125,img_loc="/store/datasets/bdd100k/images_resized/100k") -> tuple:
+def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.125,img_loc="/store/datasets/bdd100k/images_resized/100k",
+                  emb_loc="/store/datasets/bdd100k/features/resnet50",use_embs=False) -> tuple:
     """
     :param save_dir: directory to save the dataset
     :param type: type of dataset to load
@@ -197,7 +206,25 @@ def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.125,img_loc
         else:
             X_train = train_locs
             X_test = test_locs
+        
+        if use_embs:
+            train_embs = np.load(emb_loc+"/train_embs.npy",allow_pickle=True).item()
+            test_embs = np.load(emb_loc+"/test_embs.npy",allow_pickle=True).item()
 
+            input_size = train_embs[X_train[0].split("/")[-1]].shape[0]
+
+            train_data = np.zeros((len(X_train),input_size),dtype=np.float32)
+            test_data = np.zeros((len(X_test),input_size),dtype=np.float32)
+        
+            for i,x_train in enumerate(X_train):
+                train_data[i] = train_embs[x_train.split("/")[-1]]
+        
+            for i,x_test in enumerate(X_test):
+                test_data[i] = test_embs[x_test.split("/")[-1]]
+            
+            X_train = train_data
+            X_test = test_data
+            
         y_train = y_train[filt_train]    
         y_test = y_test[filt_test]
 
@@ -359,3 +386,15 @@ class AdversarialWeatherDataset(Dataset):
         else:
             self.imgs = None
     
+# Creates Embeddings Dataset for the AdversarialWeather and BDD Datasets
+class EmbeddingDataset(Dataset):
+    def __init__(self, features, labels):
+        self.features = features
+        self.labels = labels
+        
+    def __len__(self):
+        return len(self.features)
+    
+    def __getitem__(self, idx):
+        return self.features[idx], self.labels[idx]
+

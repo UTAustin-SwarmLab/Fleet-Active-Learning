@@ -59,7 +59,7 @@ def get_model(model_name,device):
 
     return model, preprocess, num_features
 
-obtain_embs = 1
+obtain_embs = 0
 
 # Location of the dataset labels
 label_loc = "/store/datasets/bdd100k/labels/det_20"
@@ -69,7 +69,7 @@ dataset_loc = "/store/datasets/bdd100k/images/100k"
 device_no = 4
 # Device no
 device = torch.device("cuda:"+str(device_no) if (torch.cuda.is_available()) else "cpu")
-model_name = "vith14"
+model_name = "resnet101"
 save_loc = "/store/datasets/bdd100k/features/"+model_name
 
 if obtain_embs:
@@ -142,7 +142,7 @@ final_model.apply(init_weights)
 final_model.to(device)
 final_model.lr = 0.001
 final_model.b_size = 70000
-final_model.n_epoch = 300
+final_model.n_epoch = 500
 final_model.device = device
 final_model.loss_fn = nn.CrossEntropyLoss()
 final_model.n_class = n_class

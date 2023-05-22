@@ -13,7 +13,7 @@ from utils.plotting_utils import *
 
 def run_sim(opt,device):
 
-    X_train,X_test,y_train,y_test = load_datasets(opt.dataset_loc,opt.dataset_type,img_loc=opt.img_loc)
+    X_train,X_test,y_train,y_test = load_datasets(opt.dataset_loc,opt.dataset_type,img_loc=opt.img_loc,emb_loc=opt.emb_loc,use_embs=opt.use_embeddings)
 
     if opt.unc_type == "clip":
         if opt.dataset_type == "AdversarialWeather":
@@ -24,11 +24,15 @@ def run_sim(opt,device):
             train_embs = np.load(opt.clip_emb_loc+"/train_embs.npy",allow_pickle=True).item()
     else:
         train_embs = None
-
+    
     n_class = len(np.unique(y_train))
 
-    test_data = create_datasets(X_test,y_test,opt.dataset_type,cache_in_first=opt.cache_in_first)
+    test_data = create_datasets(X_test,y_test,opt.dataset_type,cache_in_first=opt.cache_in_first,use_embs=opt.use_embeddings)
 
+    if opt.use_embeddings:
+        n_features = X_train.shape[1]
+    else:
+        n_features = 1000
     params = dict()
    
     params["n_device"] = opt.n_unique_device * opt.n_same_device
@@ -56,6 +60,9 @@ def run_sim(opt,device):
     params["dirichlet_base_alpha"] = opt.dirichlet_base_alpha
     params["cache_in_first"] = opt.cache_in_first
     params["train_only_final"] = opt.train_only_final
+    params["use_embeddings"] = opt.use_embeddings
+    params["n_features"] = n_features
+    params["accuracy_type"] = opt.normalized_accuracy
 
     base_classes =  [i for i in range(params["n_class"])]
     pbar = tqdm(total=opt.n_sim*opt.n_trial)
@@ -71,7 +78,8 @@ def run_sim(opt,device):
         simcoef_int = np.random.randint(low=1,high=100)
         simsum_int = np.random.randint(low=1,high=100)
 
-        model = get_model(opt.dataset_type,opt.dataset_type,device,opt.b_size,opt.n_epoch,opt.lr,n_class)
+        model = get_model(opt.dataset_type,opt.dataset_type,device,opt.b_size,opt.n_epoch,opt.lr,n_class,
+                          use_embs=opt.use_embeddings,n_features=n_features)
 
         Unc_Model = Sim(params,"Base",device,model)
         
@@ -82,9 +90,9 @@ def run_sim(opt,device):
         initial_dataset = Unc_Model.create_traindataset(X_train[tuple(Unc_Model.dataset_ind[sim_i])],y_train[tuple(Unc_Model.dataset_ind[sim_i])])
         
         pbar.set_description("Training initial model")
-        train_model(Unc_Model.model,initial_dataset,converge=opt.converge_train,only_final=opt.train_only_final,silent=False)
+        train_model(Unc_Model.model,initial_dataset,converge=opt.converge_train,only_final=opt.train_only_final)
 
-        accs = test_model(Unc_Model.model,test_data,opt.test_b_size)
+        accs = test_model(Unc_Model.model,test_data,opt.test_b_size,class_normalized=opt.normalized_accuracy)
 
         print("Test accuracy: ",accs)
 
@@ -134,34 +142,37 @@ if __name__ == "__main__":
     parser.add_argument("--dataset-loc", type=str,default="/store/datasets/bdd100k/labels/det_20")
     parser.add_argument("--img-loc", type=str,default="/store/datasets/bdd100k/images_resized/100k")
     parser.add_argument("--clip-emb-loc", type=str, default= "/store/datasets/bdd100k")
+    parser.add_argument("--emb-loc", type=str, default= "/store/datasets/bdd100k/features/resnet50")
     parser.add_argument("--gpu-no", type=int,default=4)
     parser.add_argument("--n-unique-device", type=int, default=20)
     parser.add_argument("--n-same-device", type=int, default=5)
     parser.add_argument("--n-sim", type=int, default=1)
     parser.add_argument("--n-rounds", type=int, default=5)
     parser.add_argument("--n-epoch", type=int, default=200)
-    parser.add_argument("--b-size", type=int, default=256)
+    parser.add_argument("--b-size", type=int, default=10000)
     parser.add_argument("--init-sim", type=int, default=0) 
     parser.add_argument("--n_iter", type=int, default=3)
     parser.add_argument("--n-class", type=int, default=10)
-    parser.add_argument("--test-b-size", type=int, default=1024)
-    parser.add_argument("--lr", type=float, default=0.01)
-    parser.add_argument("--n-size", type=int, default=40000)
+    parser.add_argument("--test-b-size", type=int, default=10000)
+    parser.add_argument("--lr", type=float, default=0.001)
+    parser.add_argument("--n-size", type=int, default=200)
     parser.add_argument("--n-obs", type=int, default=1000)
-    parser.add_argument("--n-cache", type=int, default=20)
+    parser.add_argument("--n-cache", type=int, default=2)
     parser.add_argument("--run-loc", type=str, default="./runs/DeepDrive")
     parser.add_argument("--n-trial",type=int, default=5)
     parser.add_argument("--init-trial",type=int, default=0)
     parser.add_argument("--unc-type",type=str, default="badge")
     parser.add_argument("--dataset-type",type=str, default="DeepDrive")
-    parser.add_argument("--converge-train",type=int, default=0)
+    parser.add_argument("--use-embeddings",type=int, default=1)
+    parser.add_argument("--converge-train",type=int, default=1)
     parser.add_argument("--cache-all",type=int, default=0)
     parser.add_argument("--dirichlet",type=int, default=1)
     parser.add_argument("--dirichlet-base",type=int, default=1)
     parser.add_argument("--dirichlet-alpha",type=float, default=1)
     parser.add_argument("--dirichlet-base-alpha",type=float, default=5)
     parser.add_argument("--cache-in-first",type=int, default=1)
-    parser.add_argument("--train-only-final",type=int, default=1)
+    parser.add_argument("--train-only-final",type=int, default=0)
+    parser.add_argument("--normalized-accuracy",type=int, default=0)
 
     opt = parser.parse_args()
 

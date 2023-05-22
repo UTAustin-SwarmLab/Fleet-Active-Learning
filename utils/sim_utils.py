@@ -214,13 +214,16 @@ class Sim:
             trfm.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
             dataset = CIFAR10Dataset(X,y,transform)
         elif self.dataset_type == "AdversarialWeather" or self.dataset_type == "DeepDrive":
-            transform  = trfm.Compose([
-            trfm.Resize(256),
-            trfm.CenterCrop(224),
-            trfm.ToTensor(),
-            trfm.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
-            ])
-            dataset = AdversarialWeatherDataset(X,y,transform,self.params["cache_all"])
+            if self.params["use_embeddings"]:
+                dataset = EmbeddingDataset(X,y)
+            else:
+                transform  = trfm.Compose([
+                trfm.Resize(256),
+                trfm.CenterCrop(224),
+                trfm.ToTensor(),
+                trfm.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
+                ])
+                dataset = AdversarialWeatherDataset(X,y,transform,self.params["cache_all"])
         return dataset
 
     # Creates dataset for training
@@ -238,15 +241,18 @@ class Sim:
             trfm.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
             dataset = CIFAR10Dataset(X,y,transform)
         elif self.dataset_type == "AdversarialWeather" or self.dataset_type == "DeepDrive":
-            transform = trfm.Compose([
-            trfm.Resize(256),
-            trfm.RandomCrop(224),
-            trfm.RandomHorizontalFlip(),
-            trfm.ToTensor(),
-            trfm.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
-            ])
-            dataset = AdversarialWeatherDataset(X,y,transform,self.params["cache_all"])
-            dataset.set_use_cache(self.params["cache_in_first"])
+            if self.params["use_embeddings"]:
+                dataset = EmbeddingDataset(X,y)
+            else:
+                transform = trfm.Compose([
+                trfm.Resize(256),
+                trfm.RandomCrop(224),
+                trfm.RandomHorizontalFlip(),
+                trfm.ToTensor(),
+                trfm.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
+                ])
+                dataset = AdversarialWeatherDataset(X,y,transform,self.params["cache_all"])
+                dataset.set_use_cache(self.params["cache_in_first"])
 
         return dataset
 
@@ -388,7 +394,11 @@ class Sim:
         if self.dataset_type == "MNIST" or self.dataset_type == "CIFAR10":
             self.model.apply(init_weights)
         elif self.dataset_type == "AdversarialWeather" or self.dataset_type == "DeepDrive":
-            self.model = FinalLayer(self.model.emb_size,self.n_class).to(self.device)
+            if self.params["use_embeddings"]:
+                self.model.apply(init_weights)
+            else:
+                self.model.fc = nn.Linear(self.model.emb_size,self.n_class).to(self.device)
+                self.model.fc.apply(init_weights)
 
     def sim_round(self,sim_i,sim_seed,X_train,y_train,testset,base_inds,obs_ind,train_embs):
 
@@ -451,7 +461,7 @@ class Sim:
             trainset = self.create_traindataset(X_train[tuple([list(set(self.dataset_ind[self.sim_seed][-1]))])],y_train[tuple([list(set(self.dataset_ind[self.sim_seed][-1]))])])
             train_model(self.model,trainset,converge=self.params["converge"],only_final=self.params["train_only_final"])
 
-            self.accs[sim_i,round_i+1] = test_model(self.model,testset,self.test_b_size)
+            self.accs[sim_i,round_i+1] = test_model(self.model,testset,self.test_b_size,self.params["accuracy_type"])
 
     def save_infos(self,save_loc,sim_type):
 
