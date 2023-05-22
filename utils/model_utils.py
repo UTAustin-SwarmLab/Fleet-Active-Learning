@@ -7,6 +7,7 @@ from utils.mnist import MNISTClassifier
 import os
 from utils.cifar10 import *
 from utils.adversarialweather import *
+import torchvision.models as vsmodels
 
 # Function to initialize weights
 def init_weights(m):
@@ -56,7 +57,7 @@ def test_model(model,test_dataset,b_size:int=100,class_normalized:bool=True) -> 
         return sum(correct)/sum(total)
 
 # Function to train model
-def train_model(model,train_dataset,silent:bool=True,converge:bool=False):
+def train_model(model,train_dataset,silent:bool=True,converge:bool=False,only_final:bool=False):
     """
     Trains the model on the train dataset
     :param model: Model to be trained
@@ -67,9 +68,19 @@ def train_model(model,train_dataset,silent:bool=True,converge:bool=False):
 
     model.train()
 
-    optimizer = optim.Adam(model.parameters(), lr=model.lr)
-    lr_sch = lr_scheduler.ExponentialLR(optimizer,gamma=0.99,last_epoch=-1)
+    if only_final:
+        for param in model.parameters():
+            param.requires_grad = False
+    
+        # Set the requires_grad attribute of the final layer parameters to True
+        for param in model.fc.parameters():
+            param.requires_grad = True
+        optimizer = optim.Adam(model.fc.parameters(), lr=model.lr)
+    else:
+        optimizer = optim.Adam(model.parameters(), lr=model.lr)
 
+    
+    lr_sch = lr_scheduler.ExponentialLR(optimizer,gamma=0.99,last_epoch=-1)
     dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=model.b_size, shuffle=True, worker_init_fn=0)
 
     if not silent:
@@ -122,14 +133,23 @@ def train_model(model,train_dataset,silent:bool=True,converge:bool=False):
             lr_sch.step()
 
             if epoch >= model.n_epoch//2 and acc_final < 0.2:
-                model.apply(init_weights)
-                optimizer = optim.Adam(model.parameters(), lr=model.lr)
+                if only_final:
+                    for param in model.parameters():
+                        param.requires_grad = False
+                
+                    # Set the requires_grad attribute of the final layer parameters to True
+                    for param in model.fc.parameters():
+                        param.requires_grad = True
+                    optimizer = optim.Adam(model.fc.parameters(), lr=model.lr)
+                    model.fc.apply(init_weights)
+                else:
+                    model.apply(init_weights)
+                    optimizer = optim.Adam(model.parameters(), lr=model.lr)
                 lr_sch = lr_scheduler.ExponentialLR(optimizer,gamma=0.99,last_epoch=-1)
                 epoch = 0
             else:
                 epoch += 1
     
-
 # Function to get model
 def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,lr:float=0.001,n_class:int=5):
     """
@@ -147,7 +167,11 @@ def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,
     elif model_name == "CIFAR10":
         model = CifarResNet(BasicBlock,[2]*4)
     elif model_name == "AdversarialWeather" or model_name == "DeepDrive":
-        model = AdversarialWeatherResNet([2]*4,num_classes=n_class)
+        #model = AdversarialWeatherResNet(output_layer="avgpool",n_class=n_class)
+        model = vsmodels.resnet50(pretrained=True)
+        num_features = model.fc.in_features
+        model.fc = FinalLayer(num_features, n_class)
+        model.emb_size = num_features
     else:
         raise ValueError("Model not found")
     

@@ -2,7 +2,8 @@ import torch
 from torch import Tensor
 import torch.nn as nn
 from typing import Type, Any, Callable, Union, List, Optional
-
+import torchvision.models as vsmodels
+import torch.nn.init as init
 
 def conv3x3(in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1) -> nn.Conv2d:
     """3x3 convolution with padding"""
@@ -12,7 +13,7 @@ def conv3x3(in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, d
 def conv1x1(in_planes: int, out_planes: int, stride: int = 1) -> nn.Conv2d:
     """1x1 convolution"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
-
+"""
 class BasicBlock(nn.Module):
     expansion: int = 1
 
@@ -225,3 +226,42 @@ class AdversarialWeatherResNet(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         return self._forward_impl(x)
+""" 
+class AdversarialWeatherResNet(nn.Module):
+    def __init__(self,output_layer=None,n_class=10) -> None:
+        super().__init__()
+        self.pretrained = vsmodels.resnet18(pretrained=True)
+        self.output_layer = output_layer
+        self.layers = list(self.pretrained._modules.keys())
+        self.layer_count = 0
+        for l in self.layers:
+            if l != self.output_layer:
+                self.layer_count += 1
+            else:
+                break
+        for i in range(1,len(self.layers)-self.layer_count):
+            self.dummy_var = self.pretrained._modules.pop(self.layers[-i])
+        
+        self.net = nn.Sequential(self.pretrained._modules)
+        self.final_layer = nn.Linear(in_features=512, out_features=n_class)
+        self.emb_size = 512
+
+    def forward(self,x):
+        emb = self.net(x)
+        out = self.final_layer(emb)
+        return out, emb
+
+class FinalLayer(nn.Module):
+    def __init__(self,input_size=512,n_class=10) -> None:
+        super().__init__()
+        self.fc1 = nn.Sequential( nn.Linear(in_features=input_size, out_features=input_size//2),
+            nn.ReLU(True))
+        self.fc2 = nn.Linear(in_features=input_size//2, out_features=n_class)
+
+        self.emb_size = input_size//2
+        self.n_class = n_class
+
+    def forward(self,x):
+        emb = self.fc1(x)
+        out = self.fc2(emb)
+        return out, emb

@@ -388,7 +388,7 @@ class Sim:
         if self.dataset_type == "MNIST" or self.dataset_type == "CIFAR10":
             self.model.apply(init_weights)
         elif self.dataset_type == "AdversarialWeather" or self.dataset_type == "DeepDrive":
-            self.model.apply(init_weights)
+            self.model = FinalLayer(self.model.emb_size,self.n_class).to(self.device)
 
     def sim_round(self,sim_i,sim_seed,X_train,y_train,testset,base_inds,obs_ind,train_embs):
 
@@ -449,7 +449,7 @@ class Sim:
 
             self.reset_model()
             trainset = self.create_traindataset(X_train[tuple([list(set(self.dataset_ind[self.sim_seed][-1]))])],y_train[tuple([list(set(self.dataset_ind[self.sim_seed][-1]))])])
-            train_model(self.model,trainset,converge=self.params["converge"])
+            train_model(self.model,trainset,converge=self.params["converge"],only_final=self.params["train_only_final"])
 
             self.accs[sim_i,round_i+1] = test_model(self.model,testset,self.test_b_size)
 

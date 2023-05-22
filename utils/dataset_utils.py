@@ -33,7 +33,7 @@ def filter_indices(X_train,indices):
         X_train = X_train[indices]
 
 # Function to load datasets
-def create_datasets(X,y,type,cache_all=False):
+def create_datasets(X,y,type,cache_all=False,cache_in_first=False):
 
     if type == "MNIST":
         dataset = create_MNIST_datasets(X,y)
@@ -41,6 +41,7 @@ def create_datasets(X,y,type,cache_all=False):
         dataset = create_CIFAR10_datasets(X,y)
     elif type == "AdversarialWeather" or type == "DeepDrive":
         dataset = create_AdversarialWeather_dataset(X,y,cache_all)
+        dataset.set_use_cache(cache_in_first)
     else:
         print("Dataset not found")
         exit()
@@ -77,7 +78,7 @@ def create_CIFAR10_datasets(X,y):
 def create_AdversarialWeather_dataset(X,y,cache_all=False):
     transform  = trfm.Compose([
         trfm.Resize(256),
-        trfm.RandomCrop(224),
+        trfm.CenterCrop(224),
         trfm.ToTensor(),
         trfm.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
     ])
