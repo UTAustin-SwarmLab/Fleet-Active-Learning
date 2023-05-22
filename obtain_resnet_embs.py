@@ -1,10 +1,12 @@
 import numpy as np
 from tqdm import tqdm
+import torch.nn as nn
 import torch
 import argparse
 import torch
 import copy
 import os
+import torchvision.models as vsmodels
 from torch.utils.data import Dataset
 from utils.general_utils import *
 from utils.dataset_utils import *
@@ -12,6 +14,7 @@ from utils.model_utils import *
 from utils.sim_utils import *
 from utils.plotting_utils import *
 from PIL import Image
+
 
 # Custom dataset class
 class CustomDataset(Dataset):
@@ -40,17 +43,14 @@ save_loc = "/store/datasets/bdd100k/features/"+model_name
 
 if obtain_embs:
 
-    model = vsmodels.resnet101(pretrained=True)
+    weights = vsmodels.ResNet101_Weights.DEFAULT
+    model = vsmodels.resnet101(weights=weights)
+
+    preprocess = weights.transforms()
+
     num_features = model.fc.in_features
     model.fc = nn.Identity()
     model.eval()
-
-    transform = trfm.Compose([
-            trfm.Resize(256),
-            trfm.CenterCrop(224),
-            trfm.ToTensor(),
-            trfm.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
-        ])
 
     model.to(device)
 
@@ -72,7 +72,7 @@ if obtain_embs:
     with torch.no_grad():
         for i in tqdm(range(len(train_locs))):
             img = Image.open(train_locs[i])
-            img = transform(img).to(device).reshape(1,3,224,224)
+            img = preprocess(img).unsqueeze(0).to(device)
             features = model(img)
             train_embs[train_locs[i].split("/")[-1]] = features[0].cpu().numpy()
 
@@ -81,7 +81,7 @@ if obtain_embs:
     with torch.no_grad():
         for i in tqdm(range(len(test_locs))):
             img = Image.open(test_locs[i])
-            img = transform(img).to(device).reshape(1,3,224,224)
+            img = preprocess(img).unsqueeze(0).to(device)
             features = model(img)
             test_embs[test_locs[i].split("/")[-1]] = features[0].cpu().numpy()
 
@@ -128,6 +128,10 @@ test_dataset = CustomDataset(test_features, y_test)
 
 train_model(final_model,train_dataset,silent=False)
 
+accs = test_model(final_model,test_dataset,b_size=70000,class_normalized=True)
+
+print("Normalized accuracy:", accs)
+
 accs = test_model(final_model,test_dataset,b_size=70000,class_normalized=False)
 
-print(accs)
+print("Regular accuracy:", accs)
