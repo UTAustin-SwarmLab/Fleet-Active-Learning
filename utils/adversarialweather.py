@@ -257,6 +257,9 @@ class FinalLayer(nn.Module):
         self.fc1 = nn.Sequential( nn.Linear(in_features=input_size, out_features=input_size),
             nn.ReLU(True),
             nn.Dropout(0.3),
+            nn.Linear(in_features=input_size, out_features=input_size),
+            nn.ReLU(True),
+            nn.Dropout(0.3),
             nn.Linear(in_features=input_size, out_features=input_size//2),
             nn.ReLU(True),
             nn.Dropout(0.3))
