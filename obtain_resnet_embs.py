@@ -28,6 +28,37 @@ class CustomDataset(Dataset):
     def __getitem__(self, idx):
         return self.features[idx], self.labels[idx]
 
+def get_model(model_name,device):
+
+    if model_name == "resnet50":
+        weights = vsmodels.ResNet50_Weights.DEFAULT
+        model = vsmodels.resnet50(weights=weights)
+        preprocess = weights.transforms()
+        num_features = model.fc.in_features
+        model.fc = nn.Identity()
+    elif model_name == "resnet101":
+        weights = vsmodels.ResNet101_Weights.DEFAULT
+        model = vsmodels.resnet101(weights=weights)
+        preprocess = weights.transforms()
+        num_features = model.fc.in_features
+        model.fc = nn.Identity()
+    elif model_name == "resnet152":
+        weights = vsmodels.ResNet152_Weights.DEFAULT
+        model = vsmodels.resnet152(weights=weights)
+        preprocess = weights.transforms()
+        num_features = model.fc.in_features
+        model.fc = nn.Identity()
+    elif model_name == "vith14":
+        weights = vsmodels.ViT_H_14_Weights.DEFAULT
+        model = vsmodels.vit_h_14(weights=weights)
+        preprocess = weights.transforms()
+        num_features = model.heads.head.in_features
+        model.heads.head = nn.Identity()
+    else:
+        raise Exception("Model name not found")
+
+    return model, preprocess, num_features
+
 obtain_embs = 1
 
 # Location of the dataset labels
@@ -38,18 +69,12 @@ dataset_loc = "/store/datasets/bdd100k/images/100k"
 device_no = 4
 # Device no
 device = torch.device("cuda:"+str(device_no) if (torch.cuda.is_available()) else "cpu")
-model_name = "resnet101"
+model_name = "vith14"
 save_loc = "/store/datasets/bdd100k/features/"+model_name
 
 if obtain_embs:
 
-    weights = vsmodels.ResNet101_Weights.DEFAULT
-    model = vsmodels.resnet101(weights=weights)
-
-    preprocess = weights.transforms()
-
-    num_features = model.fc.in_features
-    model.fc = nn.Identity()
+    model, preprocess, num_features = get_model(model_name,device)
     model.eval()
 
     model.to(device)
