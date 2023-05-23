@@ -254,9 +254,7 @@ class AdversarialWeatherResNet(nn.Module):
 class FinalLayer(nn.Module):
     def __init__(self,input_size=512,n_class=10) -> None:
         super().__init__()
-        self.fc1 = nn.Sequential( nn.Linear(in_features=input_size, out_features=input_size),
-            nn.ReLU(True),
-            nn.Dropout(0.3),
+        self.fc1 = nn.Sequential(
             nn.Linear(in_features=input_size, out_features=input_size//2),
             nn.ReLU(True),
             nn.Dropout(0.3),
@@ -266,7 +264,7 @@ class FinalLayer(nn.Module):
             nn.Linear(in_features=input_size//4, out_features=input_size//8),
             nn.ReLU(True),
             nn.Dropout(0.3),
-            nn.Linear(in_features=input_size//4, out_features=128),
+            nn.Linear(in_features=input_size//8, out_features=128),
             nn.ReLU(True),
             nn.Dropout(0.3))
         self.fc2 = nn.Linear(in_features=128, out_features=n_class)
