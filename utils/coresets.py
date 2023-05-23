@@ -141,6 +141,40 @@ class kCenterGreedy:
         
         return cache_inds
     
+    def iterative_new(self):
+        "Returns a coreset of size n_cache x n_device samples"
+
+        # Initialize set of caches from scratch
+
+        cache_inds = []
+
+        dists = np.zeros((self.n_obs*self.n_device,1))
+        dists[:] = self.dists
+        mask = np.zeros((self.n_obs*self.n_device,1))
+
+        features = np.concatenate(self.features, axis=0)
+
+        for i in range(self.n_device):
+            mask[i*(self.n_obs):(i+1)*(self.n_obs)] = 1
+
+            for j in range(self.n_cache):
+                  
+                ind = np.argmax(dists*mask) - i*self.n_obs
+
+                if ind < 0:
+                    ind = 0
+                    while self.inds[i][ind] in cache_inds:
+                        ind += 1
+                
+                cache_inds.append(self.inds[i][ind])
+  
+                dists = np.minimum(dists, pairwise_distances(features, self.features[i][ind].reshape(1,-1), metric=self.metric))
+                
+            mask[i*(self.n_obs):(i+1)*(self.n_obs)] = 0
+
+        return cache_inds
+        
+
     def sample_caches(self, method='Distributed'):
         
         if method == 'Distributed':
@@ -149,6 +183,8 @@ class kCenterGreedy:
             return self.oracle_greedy()
         elif method == 'Interactive':
             return self.iterative_distributed()
+        elif method == "Interactive-New":
+            return self.iterative_new()
         else:
             raise ValueError('Method not supported')
           

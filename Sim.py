@@ -110,7 +110,7 @@ def run_sim(opt,device):
 
             Distributed_Model = Sim(params,"Distributed",device,copy.deepcopy(Unc_Model.model))
             Oracle_Model = Sim(params,"Oracle",device,copy.deepcopy(Unc_Model.model))
-            Interactive_Model = Sim(params,"Interactive",device,copy.deepcopy(Unc_Model.model))
+            Interactive_Model = Sim(params,"Interactive-New",device,copy.deepcopy(Unc_Model.model))
 
             x_dist, N_x = Distributed_Model.create_xdist(trial_i*simcoef_int+simsum_int,obs_classes,y_train)
                 
@@ -127,7 +127,7 @@ def run_sim(opt,device):
             Distributed_Model.save_infos(trial_loc,"Distributed")
             Oracle_Model.save_infos(trial_loc,"Oracle")
             Interactive_Model.save_infos(trial_loc,"Interactive")
-        
+
             plot_accs([Distributed_Model.accs,Oracle_Model.accs,Interactive_Model.accs],["Distributed","Oracle","Interactive"],trial_loc+"/Accs.jpg")
             pbar.update(1)
 
@@ -142,7 +142,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset-loc", type=str,default="/store/datasets/bdd100k/labels/det_20")
     parser.add_argument("--img-loc", type=str,default="/store/datasets/bdd100k/images_resized/100k")
     parser.add_argument("--clip-emb-loc", type=str, default= "/store/datasets/bdd100k")
-    parser.add_argument("--emb-loc", type=str, default= "/store/datasets/bdd100k/features/resnet50")
+    parser.add_argument("--emb-loc", type=str, default= "/store/datasets/bdd100k/features/vith14")
     parser.add_argument("--gpu-no", type=int,default=4)
     parser.add_argument("--n-unique-device", type=int, default=20)
     parser.add_argument("--n-same-device", type=int, default=5)
