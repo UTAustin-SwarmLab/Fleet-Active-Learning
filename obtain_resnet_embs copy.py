@@ -59,18 +59,18 @@ def get_model(model_name,device):
 
     return model, preprocess, num_features
 
-obtain_embs = 0
+obtain_embs = 1
 
 # Location of the dataset labels
-label_loc = "/store/datasets/bdd100k/labels/det_20"
+label_loc = "/store/datasets/AdversarialWeather"
 # Location of the images that will be used
-dataset_loc = "/store/datasets/bdd100k/images/100k"
+dataset_loc = "/store/datasets/AdversarialWeather/Recordings"
 # gpu no for running model
 device_no = 4
 # Device no
 device = torch.device("cuda:"+str(device_no) if (torch.cuda.is_available()) else "cpu")
 model_name = "vith14"
-save_loc = "/store/datasets/bdd100k/features/"+model_name
+save_loc = "/store/datasets/AdversarialWeather/features/"+model_name
 
 if obtain_embs:
 
@@ -79,59 +79,47 @@ if obtain_embs:
 
     model.to(device)
 
-    with open(label_loc+"/det_train.json","r") as file:
-        train_labels = json.load(file)
+    with open(label_loc+"/weather_labels.json","r") as file:
+        weather_labels = json.load(file)
 
-    with open(label_loc+"/det_val.json","r") as file:
-        val_labels = json.load(file)
+    img_locs = list(weather_labels.keys())
 
-    train_locs = list(map(lambda x:dataset_loc+"/train/"+x["name"],train_labels))
-    test_locs = list(map(lambda x:dataset_loc+"/val/"+x["name"],val_labels))
+    img_locs = list(map(lambda x:dataset_loc+"/"+x,img_locs))
 
+    embs = dict()
 
-    train_embs = dict()
-    test_embs = dict()
+    get_key = lambda x: "/".join(x.split("/")[-4:])
 
     # get embeddings for train images
 
     with torch.no_grad():
-        for i in tqdm(range(len(train_locs))):
-            img = Image.open(train_locs[i])
+        for i in tqdm(range(len(img_locs))):
+            img = Image.open(img_locs[i])
             img = preprocess(img).unsqueeze(0).to(device)
             features = model(img)
-            train_embs[train_locs[i].split("/")[-1]] = features[0].cpu().numpy()
+            embs[get_key(img_locs[i])] = features[0].cpu().numpy()
 
     # get embeddings for test images
-
-    with torch.no_grad():
-        for i in tqdm(range(len(test_locs))):
-            img = Image.open(test_locs[i])
-            img = preprocess(img).unsqueeze(0).to(device)
-            features = model(img)
-            test_embs[test_locs[i].split("/")[-1]] = features[0].cpu().numpy()
-
     # save embeddings
     os.makedirs(save_loc)
 
-    np.save(save_loc+"/train_embs.npy",train_embs)
-    np.save(save_loc+"/test_embs.npy",test_embs)
+    np.save(save_loc+"/embs.npy",embs)
 
-train_embs = np.load(save_loc+"/train_embs.npy",allow_pickle=True).item()
-test_embs = np.load(save_loc+"/test_embs.npy",allow_pickle=True).item()
+embs = np.load(save_loc+"/embs.npy",allow_pickle=True).item()
 
-X_train,X_test,y_train,y_test = load_datasets(label_loc,"DeepDrive",img_loc=dataset_loc)
+X_train,X_test,y_train,y_test = load_datasets(label_loc,"AdversarialWeather",img_loc=dataset_loc)
 
 n_class = len(np.unique(y_train))
-input_size = train_embs[X_train[0].split("/")[-1]].shape[0]
+input_size = embs[get_key(X_train)].shape[0]
 
 train_data = np.zeros((len(X_train),input_size),dtype=np.float32)
 test_data = np.zeros((len(X_test),input_size),dtype=np.float32)
 
 for i,x_train in enumerate(X_train):
-    train_data[i] = train_embs[x_train.split("/")[-1]]
+    train_data[i] = embs[get_key(x_train)]
 
 for i,x_test in enumerate(X_test):
-    test_data[i] = test_embs[x_test.split("/")[-1]]
+    test_data[i] = embs[get_key(x_test)]
 
 train_features = torch.tensor(train_data).float()
 test_features = torch.tensor(test_data).float()
