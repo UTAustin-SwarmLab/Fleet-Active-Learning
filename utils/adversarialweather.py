@@ -257,15 +257,21 @@ class FinalLayer(nn.Module):
         self.fc1 = nn.Sequential( nn.Linear(in_features=input_size, out_features=input_size),
             nn.ReLU(True),
             nn.Dropout(0.3),
-            nn.Linear(in_features=input_size, out_features=input_size),
-            nn.ReLU(True),
-            nn.Dropout(0.3),
             nn.Linear(in_features=input_size, out_features=input_size//2),
             nn.ReLU(True),
+            nn.Dropout(0.3),
+            nn.Linear(in_features=input_size//2, out_features=input_size//4),
+            nn.ReLU(True),
+            nn.Dropout(0.3),
+            nn.Linear(in_features=input_size//4, out_features=input_size//8),
+            nn.ReLU(True),
+            nn.Dropout(0.3),
+            nn.Linear(in_features=input_size//4, out_features=128),
+            nn.ReLU(True),
             nn.Dropout(0.3))
-        self.fc2 = nn.Linear(in_features=input_size//2, out_features=n_class)
+        self.fc2 = nn.Linear(in_features=128, out_features=n_class)
 
-        self.emb_size = input_size//2
+        self.emb_size = 128
         self.n_class = n_class
 
     def forward(self,x):
