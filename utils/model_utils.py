@@ -168,8 +168,10 @@ def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,
     elif model_name == "CIFAR10":
         model = CifarResNet(BasicBlock,[2]*4)
     elif model_name == "AdversarialWeather" or model_name == "DeepDrive":
-        if use_embs:
+        if use_embs and model_name == "DeepDrive":
             model = FinalLayer(n_features, n_class)
+        elif use_embs and model_name == "AdversarialWeather":
+            model = FinalLayerAdversarial(n_features, n_class)
         else:
             model = vsmodels.resnet50(pretrained=True)
             num_features = model.fc.in_features

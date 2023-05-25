@@ -59,18 +59,35 @@ def get_model(model_name,device):
 
     return model, preprocess, num_features
 
-obtain_embs = 1
+parser = argparse.ArgumentParser(description='Obtain embeddings from a pretrained model')
+parser.add_argument('--obtain-embs', type=int, default=1, help='Obtain embeddings')
+parser.add_argument('--label-loc', type=str, default="/store/datasets/AdversarialWeather", help='Location of the dataset labels')
+parser.add_argument('--dataset-loc', type=str, default="/store/datasets/AdversarialWeather/Recordings", help='Location of the images that will be used')
+parser.add_argument('--device-no', type=int, default=0, help='gpu no for running model')
+parser.add_argument('--model-name', type=str, default="resnet50", help='Model name')
+parser.add_argument('--save-loc', type=str, default="/store/datasets/AdversarialWeather/features/", help='Location to save the embeddings')
+parser.add_argument('--train-on-embs', type=int, default=0, help='Train on embeddings')
+arg = parser.parse_args()
+
+obtain_embs = arg.obtain_embs
+train_on_embs = arg.train_on_embs
 
 # Location of the dataset labels
-label_loc = "/store/datasets/AdversarialWeather"
+label_loc = arg.label_loc
 # Location of the images that will be used
-dataset_loc = "/store/datasets/AdversarialWeather/Recordings"
+dataset_loc = arg.dataset_loc
 # gpu no for running model
-device_no = 4
+device_no = arg.device_no
 # Device no
 device = torch.device("cuda:"+str(device_no) if (torch.cuda.is_available()) else "cpu")
-model_name = "vith14"
+model_name = arg.model_name
+
+print("Training",model_name,"on Adversarial Weather dataset")
+
 save_loc = "/store/datasets/AdversarialWeather/features/"+model_name
+
+get_key = lambda x: "/".join(x.split("/")[-4:])
+
 
 if obtain_embs:
 
@@ -88,7 +105,6 @@ if obtain_embs:
 
     embs = dict()
 
-    get_key = lambda x: "/".join(x.split("/")[-4:])
 
     # get embeddings for train images
 
@@ -105,46 +121,54 @@ if obtain_embs:
 
     np.save(save_loc+"/embs.npy",embs)
 
-embs = np.load(save_loc+"/embs.npy",allow_pickle=True).item()
+if train_on_embs:
+        
+    embs = np.load(save_loc+"/embs.npy",allow_pickle=True).item()
 
-X_train,X_test,y_train,y_test = load_datasets(label_loc,"AdversarialWeather",img_loc=dataset_loc)
+    X_train,X_test,y_train,y_test = load_datasets(label_loc,"AdversarialWeather",img_loc=dataset_loc,test_ratio=0.5)
 
-n_class = len(np.unique(y_train))
-input_size = embs[get_key(X_train)].shape[0]
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, train_size=30, random_state=42)
 
-train_data = np.zeros((len(X_train),input_size),dtype=np.float32)
-test_data = np.zeros((len(X_test),input_size),dtype=np.float32)
+    print("Total size:", len(X_train)+len(X_test))
 
-for i,x_train in enumerate(X_train):
-    train_data[i] = embs[get_key(x_train)]
+    print("Train size:", len(X_train))
 
-for i,x_test in enumerate(X_test):
-    test_data[i] = embs[get_key(x_test)]
+    n_class = len(np.unique(y_train))
+    input_size = embs[get_key(X_train[0])].shape[0]
 
-train_features = torch.tensor(train_data).float()
-test_features = torch.tensor(test_data).float()
+    train_data = np.zeros((len(X_train),input_size),dtype=np.float32)
+    test_data = np.zeros((len(X_test),input_size),dtype=np.float32)
 
-final_model = FinalLayer(input_size,n_class)
+    for i,x_train in enumerate(X_train):
+        train_data[i] = embs[get_key(x_train)]
 
-final_model.apply(init_weights)
-final_model.to(device)
-final_model.lr = 0.001
-final_model.b_size = 70000
-final_model.n_epoch = 500
-final_model.device = device
-final_model.loss_fn = nn.CrossEntropyLoss()
-final_model.n_class = n_class
+    for i,x_test in enumerate(X_test):
+        test_data[i] = embs[get_key(x_test)]
 
-# Create the dataset and dataloader
-train_dataset = CustomDataset(train_features, y_train)
-test_dataset = CustomDataset(test_features, y_test)
+    train_features = torch.tensor(train_data).float()
+    test_features = torch.tensor(test_data).float()
 
-train_model(final_model,train_dataset,silent=False)
+    final_model = FinalLayerAdversarial(input_size,n_class)
 
-accs = test_model(final_model,test_dataset,b_size=70000,class_normalized=True)
+    final_model.apply(init_weights)
+    final_model.to(device)
+    final_model.lr = 0.001
+    final_model.b_size = 70000
+    final_model.n_epoch = 200
+    final_model.device = device
+    final_model.loss_fn = nn.CrossEntropyLoss()
+    final_model.n_class = n_class
 
-print("Normalized accuracy:", accs)
+    # Create the dataset and dataloader
+    train_dataset = CustomDataset(train_features, y_train)
+    test_dataset = CustomDataset(test_features, y_test)
 
-accs = test_model(final_model,test_dataset,b_size=70000,class_normalized=False)
+    train_model(final_model,train_dataset,silent=False)
 
-print("Regular accuracy:", accs)
+    accs = test_model(final_model,test_dataset,b_size=70000,class_normalized=True)
+
+    print("Normalized accuracy:", accs)
+
+    accs = test_model(final_model,test_dataset,b_size=70000,class_normalized=False)
+
+    print("Regular accuracy:", accs)

@@ -33,7 +33,8 @@ n_samples = 1000
 
 
 #centers = [np.array([3,3]),np.array([1,0]),np.array([0,2])]
-centers = [np.array([0,0.5]),np.array([0.5,0]),np.array([0,-0.5]),np.array([-0.5,0])]
+#centers = [np.array([0,0.5]),np.array([0.5,0]),np.array([0,-0.5]),np.array([-0.5,0])]
+centers = [np.array([0,0]),np.array([0,0]),np.array([0,0]),np.array([0,0])]
 a_s = [0.5,0.5,0.5,0.5]
 b_s = [0.5,0.5,0.5,0.5]
 n_repeat = 1

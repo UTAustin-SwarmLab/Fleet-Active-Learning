@@ -119,7 +119,7 @@ def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.125,img_loc
             weather_labels = json.load(file)
         with open(save_dir+"/daytime_labels.json","r") as file:
             daytime_labels = json.load(file)
-        
+        get_key = lambda x: "/".join(x.split("/")[-4:])
         img_locs = list(daytime_labels.keys())
 
         img_locs = list(map(lambda x:img_loc+"/"+x,img_locs))
@@ -134,8 +134,8 @@ def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.125,img_loc
                 X[ind] = torch.from_numpy(cv2.resize(Img,(w,h)))
         else:
             X = img_locs
+        
 
-        get_key = lambda x: "/".join(x.split("/")[-4:])
         y = ["".join(weather_labels[get_key(x)])+daytime_labels[get_key(x)] for x in img_locs]
 
         classes = list(set(y))
@@ -144,6 +144,24 @@ def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.125,img_loc
 
         y = torch.tensor(list(map(lambda x:classes.index(x),y)),dtype=int)
         X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=test_ratio,stratify=y,random_state=1)
+
+
+        if use_embs:
+            embs = np.load(emb_loc+"/embs.npy",allow_pickle=True).item()
+
+            input_size = embs[get_key(X_train[0])].shape[0]
+
+            train_data = np.zeros((len(X_train),input_size),dtype=np.float32)
+            test_data = np.zeros((len(X_test),input_size),dtype=np.float32)
+        
+            for i,x_train in enumerate(X_train):
+                train_data[i] = embs[get_key(x_train)]
+                
+            for i,x_test in enumerate(X_test):
+                test_data[i] = embs[get_key(x_test)]
+                    
+            X_train = train_data
+            X_test = test_data
 
         if cache_all:
             return X_train, X_test, y_train, y_test, classes

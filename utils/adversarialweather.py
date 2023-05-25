@@ -276,3 +276,20 @@ class FinalLayer(nn.Module):
         emb = self.fc1(x)
         out = self.fc2(emb)
         return out, emb
+
+class FinalLayerAdversarial(nn.Module):
+    def __init__(self,input_size=512,n_class=10) -> None:
+        super().__init__()
+        self.fc1 = nn.Sequential(
+            nn.Linear(in_features=input_size, out_features=128),
+            nn.ReLU(True),
+            nn.Dropout(0.3))
+        self.fc2 = nn.Linear(in_features=128, out_features=n_class)
+
+        self.emb_size = 128
+        self.n_class = n_class
+
+    def forward(self,x):
+        emb = self.fc1(x)
+        out = self.fc2(emb)
+        return out, emb
