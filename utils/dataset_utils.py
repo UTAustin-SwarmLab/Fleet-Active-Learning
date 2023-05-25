@@ -38,7 +38,10 @@ def create_datasets(X,y,type,cache_all=False,cache_in_first=False,use_embs=False
     if type == "MNIST":
         dataset = create_MNIST_datasets(X,y)
     elif type == "CIFAR10":
-        dataset = create_CIFAR10_datasets(X,y)
+        if use_embs:
+            dataset = create_Embedding_dataset(X,y)
+        else:
+            dataset = create_CIFAR10_datasets(X,y)
     elif type == "AdversarialWeather" or type == "DeepDrive":
         if use_embs:
             dataset = create_Embedding_dataset(X,y)
@@ -114,6 +117,29 @@ def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.125,img_loc
     elif type == "CIFAR10":
         trainset = datasets.CIFAR10(root=save_dir, train=True, download=True)
         testset = datasets.CIFAR10(root=save_dir, train=False, download=True)
+        if use_embs:
+            train_embs = np.load(emb_loc+"/train_embs.npy",allow_pickle=True).item()
+            test_embs = np.load(emb_loc+"/test_embs.npy",allow_pickle=True).item()
+
+            input_size = train_embs[0].shape[0]
+
+            train_data = np.zeros((len(train_embs),input_size),dtype=np.float32)
+            test_data = np.zeros((len(test_embs),input_size),dtype=np.float32)
+
+            for i in range(len(train_embs)):
+                train_data[i] = train_embs[i]
+
+            for i in range(len(test_embs)):
+                test_data[i] = test_embs[i]
+            
+            X_train = train_data
+            X_test = test_data
+
+            y_train = torch.tensor(trainset.targets,dtype=int)
+            y_test = torch.tensor(testset.targets,dtype=int)
+
+            return X_train, X_test, y_train, y_test
+    
     elif type == "AdversarialWeather":
         with open(save_dir+"/weather_labels.json","r") as file:
             weather_labels = json.load(file)

@@ -166,7 +166,10 @@ def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,
     if model_name == "MNIST":
         model = MNISTClassifier()
     elif model_name == "CIFAR10":
-        model = CifarResNet(BasicBlock,[2]*4)
+        if use_embs:
+            model = FinalLayerCIFAR10(n_features, n_class)
+        else:
+            model = CifarResNet(BasicBlock,[2]*4)
     elif model_name == "AdversarialWeather" or model_name == "DeepDrive":
         if use_embs and model_name == "DeepDrive":
             model = FinalLayer(n_features, n_class)
