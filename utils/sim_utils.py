@@ -209,10 +209,13 @@ class Sim:
             trfm.Normalize((0.1307), (0.3081))])
             dataset = MNISTDataset(X,y,transform)
         elif self.dataset_type == "CIFAR10":
-            transform = trfm.Compose([
-            trfm.ToTensor(),
-            trfm.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
-            dataset = CIFAR10Dataset(X,y,transform)
+            if self.params["use_embeddings"]:
+                dataset = EmbeddingDataset(X,y)
+            else:
+                transform = trfm.Compose([
+                trfm.ToTensor(),
+                trfm.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
+                dataset = CIFAR10Dataset(X,y,transform)
         elif self.dataset_type == "AdversarialWeather" or self.dataset_type == "DeepDrive":
             if self.params["use_embeddings"]:
                 dataset = EmbeddingDataset(X,y)
