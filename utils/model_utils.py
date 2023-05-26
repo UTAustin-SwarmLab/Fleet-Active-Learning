@@ -8,6 +8,7 @@ import os
 from utils.cifar10 import *
 from utils.adversarialweather import *
 import torchvision.models as vsmodels
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 # Function to initialize weights
 def init_weights(m):
@@ -180,6 +181,10 @@ def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,
             num_features = model.fc.in_features
             model.fc = nn.Linear(num_features,n_class)
             model.emb_size = num_features
+    elif model_name == "DeepDrive-Detection":
+        model = vsmodels.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+        in_features = model.roi_heads.box_predictor.cls_score.in_features
+        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
     else:
         raise ValueError("Model not found")
     

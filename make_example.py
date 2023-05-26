@@ -2,6 +2,7 @@
 from utils.coresets import *
 import matplotlib.pyplot as plt
 import seaborn as sns
+from matplotlib.colors import LinearSegmentedColormap
 
 import numpy as np
 
@@ -34,13 +35,13 @@ n_samples = 1000
 
 #centers = [np.array([3,3]),np.array([1,0]),np.array([0,2])]
 #centers = [np.array([0,0.5]),np.array([0.5,0]),np.array([0,-0.5]),np.array([-0.5,0])]
-centers = [np.array([0,0]),np.array([0,0]),np.array([0,0]),np.array([0,0])]
-a_s = [1.5,1.5,1.5,1.5]
-b_s = [0.5,0.5,0.5,0.5]
+centers = [np.array([0,0]),np.array([0,0]),np.array([0,0])]
+a_s = [1.5,1.5,1.5]
+b_s = [0.5,0.5,0.5]
 n_repeat = 3
 n_device = len(centers)
-n_device_show = 4
-rotation_angles = [np.pi/6,np.pi/2,-np.pi/6,-np.pi/2]
+n_device_show = len(centers)
+rotation_angles = [np.pi/6,np.pi/2,-np.pi/6]
 
 X = np.zeros((0,2))
 y = np.zeros((0))
@@ -72,29 +73,76 @@ X_centr = np.concatenate((X[centr_inds],base_embeddings),axis=0)
 # Now we plot the selected points and the original dataset
 # The original dataset is colored by a cluster and the selected points are colored by a different color
 
-fig, ax = plt.subplots(figsize=(7,7),dpi=600)
+sns.set_style('darkgrid')
+
+fig, ax = plt.subplots(figsize=(8,7),dpi=600)
 # plot the distribution of the data points with gray color
 
 legends = ["Robot %d"%(i+1) for i in range(n_device_show)]
 
-for i in range(n_device_show):
-    plt.scatter(X[obs_inds[i],0],X[obs_inds[i],1],label=legends[i],alpha=0.3)
+obs_inds = np.stack(obs_inds).reshape(-1)
 
-plt.scatter(X_dist[:,0],X_dist[:,1],marker="x",s=100,color="b",label="Distributed",linewidths=3)
-plt.scatter(X_centr[:,0],X_centr[:,1],marker="o",s=100,color="k",facecolors='none',label="Oracle",linewidths=3)
+#for i in range(n_device_show):
+#    plt.scatter(X[obs_inds[i],0],X[obs_inds[i],1],c=y[obs_inds[i]],cmap="Oranges",label=legends[i])
+colors = plt.cm.get_cmap('Greens',5)
+colors =  [plt.cm.get_cmap("Blues",3),plt.cm.get_cmap("Oranges",4),plt.cm.get_cmap("Greens",4)]
+#sc = plt.scatter(X[obs_inds[:n_device_show*n_samples],0],X[:n_device_show*n_samples,1],c=y[obs_inds[:n_device_show*n_samples]]+1,cmap="Greens")
+#color=colors(i+1)
+for i in range(n_device_show):
+    plt.scatter(X[obs_inds[i*n_samples:(i+1)*n_samples],0],X[obs_inds[i*n_samples:(i+1)*n_samples],1],color=colors[i](1),label=legends[i])
+
+#sc = plt.scatter(X[obs_inds[:n_device_show*n_samples],0],X[:n_device_show*n_samples,1],c=y[obs_inds[:n_device_show*n_samples]])
+
+# Adjust the colormap normalization
+#norm = plt.Normalize(0, 5)
+#sc.set_norm(norm)
+
+plt.scatter(X_dist[:,0],X_dist[:,1],marker="x",color="r",s=200,label="Distributed",linewidths=5)
+plt.scatter(X_centr[:,0],X_centr[:,1],marker="o",color="b",s=200,facecolors='none',label="Oracle",linewidths=5)
 
 #plt.legend(loc="lower left",fontsize=20)
-plt.legend()
-plt.ylabel("Feature 2",fontweight="bold" ,fontsize=26)
-plt.xlabel("Feature 1",fontweight="bold" ,fontsize=26)
+#plt.legend(labels=["Robot 1","Robot 2"])
+#plt.ylabel("Feature 2",fontweight="bold" ,fontsize=22)
+#plt.xlabel("Feature 1",fontweight="bold" ,fontsize=22)
 
 plt.rcParams["font.size"]=15
 plt.rcParams["axes.linewidth"]=2
-plt.rcParams["legend.labelspacing"] = 0.5
+plt.rcParams["legend.labelspacing"] = 0.4
+handles = [plt.scatter([],[],marker="o",color=colors[0](1),label="Robot 1 Obsevations",s=150), 
+           plt.scatter([],[],marker="o",color=colors[1](1),label="Robot 2  Observations",s=150), 
+           plt.scatter([],[],marker="o",color=colors[2](1),label="Robot 3  Observations",s=150),
+           plt.scatter([],[],marker="x",color="r",s=200,label="Distributed Action",linewidths=5),
+           plt.scatter([],[],marker="o",color="b",s=200,facecolors='none',label="Interactive Action",linewidths=5)]
+legend = plt.legend(handles=handles,frameon=True,loc='upper left',bbox_to_anchor=(-0.1, 1.1))
+
+
+for text in legend.get_texts():
+    text.set_weight('bold')
+
 ax.xaxis.set_tick_params(labelsize=14)
 ax.yaxis.set_tick_params(labelsize=14)
+#plt.gca().set_axis_off()
+#plt.axis('off')
+plt.tick_params(axis='both', left=False, top=False, right=False, bottom=False, labelleft=False, labeltop=False, labelright=False, labelbottom=False)
+#sns.set_style('dark')
+plt.axis('off')
 plt.tight_layout()
 
+
+
+
+"""
+# Remove x and y axes
+plt.gca().spines['left'].set_visible(False)
+plt.gca().spines['bottom'].set_visible(False)
+
+# Remove bounding box
+plt.gca().spines['right'].set_visible(False)
+plt.gca().spines['top'].set_visible(False)
+
+# Remove ticks
+plt.tick_params(axis='both', which='both', bottom=False, left=False, labelbottom=False, labelleft=False)
+"""
 
 # scatter plot of blobs
 plt.savefig("blobs1.png")
