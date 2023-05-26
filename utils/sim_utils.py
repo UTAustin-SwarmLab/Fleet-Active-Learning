@@ -453,9 +453,13 @@ class Sim:
                     embeddings = self.clip_obtain_embeddings(X_train,y_train,all_indices,train_embs)
 
                 embeddings, base_embeddings = self.map_embeddings_devices(embeddings,all_indices,obs_ind[round_i],self.dataset_ind[sim_seed][-1])
-
-                sampling_policy = kCenterGreedy(embeddings,base_embeddings,obs_ind[round_i],self.n_iter,self.n_cache)
-
+                
+                if self.params["center_selection"]=="kcenter":
+                    sampling_policy = kCenterGreedy(embeddings,base_embeddings,obs_ind[round_i],self.n_iter,self.n_cache)
+                elif self.params["center_selection"]=="facility":
+                    sampling_policy = FacilityLocation(embeddings,base_embeddings,obs_ind[round_i],self.n_iter,self.n_cache)
+                else:
+                    raise ValueError("Invalid Center Selection Type")
                 cached_inds = sampling_policy.sample_caches(self.sim_type)
 
             self.dataset_ind[sim_seed].append(self.dataset_ind[sim_seed][-1] + cached_inds)

@@ -174,7 +174,6 @@ class kCenterGreedy:
 
         return cache_inds
         
-
     def sample_caches(self, method='Distributed'):
         
         if method == 'Distributed':
@@ -188,7 +187,174 @@ class kCenterGreedy:
         else:
             raise ValueError('Method not supported')
           
+class FacilityLocation:
 
+    def __init__(self, features,base_features, obs_inds, n_iter, n_cache, metric='euclidean'):
+        self.features = features
+        self.base_features = base_features
+        self.inds = obs_inds
+        self.n_cache = n_cache
+        self.metric = metric
+        self.min_distances = None
+        self.n_device = len(self.features)
+        self.n_obs = self.features[0].shape[0]
+        self.already_selected = []
+        self.n_iter = n_iter
+
+        self.M = np.zeros((self.n_obs*self.n_device,self.n_obs*self.n_device))
+        dists = pairwise_distances(np.concatenate(self.features, axis=0), metric=self.metric)
+        self.M = self.distance_function(dists)
+
+        if base_features.shape[0] != 0:
+            dists = pairwise_distances(np.concatenate(self.features, axis=0), base_features, metric=self.metric)
+            m = self.distance_function(dists)
+            self.max_M = np.max(m,axis=1).reshape(-1,1)
+        else:
+            self.max_M = np.zeros((self.n_obs*self.n_device,1))
+
+    def distance_function(self, x):
+        return 1/(1+0.01*x)
+
+    def distributed(self):
+        """
+        Returns a coreset of size n_cache x n_device samples
+        
+        """
+
+        # Initialize set of caches
+
+        cache_inds = []
+
+        max_M = np.zeros((self.n_obs,1))
+
+        for i in range(self.n_device):
+
+            max_M[:] = self.max_M[i*(self.n_obs):(i+1)*(self.n_obs)]
+            Ms = self.M[i*(self.n_obs):(i+1)*(self.n_obs),i*(self.n_obs):(i+1)*(self.n_obs)]
+
+            cache_ind = []
+
+            for j in range(self.n_cache):
+                  
+                ind = np.argmax(np.maximum(max_M,Ms).sum(axis=0))
+
+                cache_ind.append(self.inds[i][ind])
+
+                max_M = np.maximum(max_M,Ms[:,ind].reshape(-1,1))
+                Ms[:,ind] = 0
+                Ms[ind,:] = 0
+                  
+            cache_inds.extend(cache_ind)
+    
+        return cache_inds
+ 
+    def centralized(self):
+
+        n_caches = [0 for i in range(self.n_device)]
+
+        mask = np.ones((1,self.n_obs*self.n_device))
+
+        cache_inds = []
+
+        #inds = [ind for ind in self.inds[0]]
+
+        #for i in range(1, self.n_device):
+        #    inds.extend(self.inds[i])
+
+        inds = [ind for ind in self.inds[0]]
+        for i in range(1, self.n_device):
+            inds.extend(self.inds[i])
+
+        max_M = self.max_M
+
+        for j in range(self.n_cache * self.n_device):
+            
+            ind = np.argmax(np.maximum(max_M,self.M*mask).sum(axis=0))
+
+            cache_inds.append(inds[ind])
+
+            device_i = ind // self.n_obs
+
+            n_caches[device_i] += 1
+
+            if n_caches[device_i] == self.n_cache:
+                mask[0,device_i*(self.n_obs):(device_i+1)*(self.n_obs)] = 0
+
+            max_M = np.maximum(max_M,self.M[:,ind].reshape(-1,1))
+        
+        return cache_inds
+
+    def centralized_new(self):
+
+        n_caches = [0 for i in range(self.n_device)]
+
+        cache_inds = []
+
+        ind_map = np.arange(self.n_device)
+
+        max_M = self.max_M
+
+        for j in range(self.n_cache * self.n_device):
+            
+            ind = np.argmax(np.maximum(max_M,self.M).sum(axis=0))
+
+            device_i = ind // self.n_obs
+
+            cache_inds.append(self.inds[ind_map[device_i]][ind%self.n_obs])
+
+            n_caches[ind_map[device_i]] += 1
+
+            max_M = np.maximum(max_M,self.M[:,ind].reshape(-1,1))
+
+            if n_caches[ind_map[device_i]] == self.n_cache:
+                self.M = np.delete(self.M,slice(device_i*(self.n_obs),(device_i+1)*(self.n_obs)),axis=1)
+                ind_map = np.delete(ind_map,device_i)
+        
+        return cache_inds
+
+    def iterative(self):
+        "Returns a coreset of size n_cache x n_device samples"
+
+        # Initialize set of caches from scratch
+
+        cache_inds = []
+        max_M  = self.max_M
+        for i in range(self.n_device):
+            M = self.M[:,i*(self.n_obs):(i+1)*(self.n_obs)]
+
+            for j in range(self.n_cache):
+                  
+                ind = np.argmax(np.maximum(max_M,M).sum(axis=0))
+
+                if ind < 0:
+                    ind = 0
+                    while self.inds[i][ind] in cache_inds:
+                        ind += 1
+                
+                cache_inds.append(self.inds[i][ind])
+  
+                max_M = np.maximum(max_M,M[:,ind].reshape(-1,1))
+                
+
+        return cache_inds
+  
+    def sample_caches(self, method='Distributed'):
+        
+        if method == 'Distributed':
+            return self.distributed()
+        elif method == 'Oracle':
+            return self.centralized()
+        elif method == 'Oracle-New':
+            return self.centralized_new()
+        elif method == 'Interactive':
+            return self.iterative()
+        elif method == 'Interactive-New':
+            return self.iterative()
+        else:
+            raise ValueError('Method not supported')
+       
+
+        
 
         
 

@@ -63,6 +63,7 @@ def run_sim(opt,device):
     params["use_embeddings"] = opt.use_embeddings
     params["n_features"] = n_features
     params["accuracy_type"] = opt.normalized_accuracy
+    params["center_selection"] = opt.center_selection
 
     base_classes =  [i for i in range(params["n_class"])]
     pbar = tqdm(total=opt.n_sim*opt.n_trial)
@@ -109,7 +110,7 @@ def run_sim(opt,device):
             trial_loc = create_run_dir(run_i_loc,"trial")
 
             Distributed_Model = Sim(params,"Distributed",device,copy.deepcopy(Unc_Model.model))
-            Oracle_Model = Sim(params,"Oracle",device,copy.deepcopy(Unc_Model.model))
+            Oracle_Model = Sim(params,"Oracle-New",device,copy.deepcopy(Unc_Model.model))
             Interactive_Model = Sim(params,"Interactive-New",device,copy.deepcopy(Unc_Model.model))
 
             x_dist, N_x = Distributed_Model.create_xdist(trial_i*simcoef_int+simsum_int,obs_classes,y_train)
@@ -143,9 +144,9 @@ if __name__ == "__main__":
     parser.add_argument("--img-loc", type=str,default="/store/datasets/CIFAR10")
     parser.add_argument("--clip-emb-loc", type=str, default= "/store/datasets/CIFAR10")
     parser.add_argument("--emb-loc", type=str, default= "/store/datasets/CIFAR10/features/resnet50")
-    parser.add_argument("--gpu-no", type=int,default=4)
+    parser.add_argument("--gpu-no", type=int,default=1)
     parser.add_argument("--n-unique-device", type=int, default=5)
-    parser.add_argument("--n-same-device", type=int, default=4)
+    parser.add_argument("--n-same-device", type=int, default=5)
     parser.add_argument("--n-sim", type=int, default=1)
     parser.add_argument("--n-rounds", type=int, default=5)
     parser.add_argument("--n-epoch", type=int, default=300)
@@ -173,6 +174,7 @@ if __name__ == "__main__":
     parser.add_argument("--cache-in-first",type=int, default=1)
     parser.add_argument("--train-only-final",type=int, default=0)
     parser.add_argument("--normalized-accuracy",type=int, default=0)
+    parser.add_argument("--center-selection",type=str, default="facility")
 
     opt = parser.parse_args()
 

@@ -442,3 +442,86 @@ class EmbeddingDataset(Dataset):
     def __getitem__(self, idx):
         return self.features[idx], self.labels[idx]
 
+class DetectionDataset(Dataset):
+
+    def __init__(self,X,y,transform=None):
+        self.img_locs = X
+        self.label_map = {
+            "motorcycle": 1,
+            "rider":2,
+            "car":3,
+            "bicycle":4,
+            "bus":5,
+            "pedestrian":6,
+            "traffic sign":7,
+            "truck":8,
+            "traffic light":9,
+            "train":10}
+        self.label = y
+
+        self.transform =transform
+    
+    def __len__(self):
+        return len(self.img_locs)
+
+    def __getitem__(self, index):
+
+        if self.cached_flag:
+            img = self.imgs[index]
+        else:
+            img = Image.open(self.img_locs[index]).convert("RGB")
+
+        labels = self.label[index]
+
+        bad_classes = ["other person","other vehicle","trailer"]
+
+        obj_class = []
+        boxes = []
+        for i in labels:
+            if i["category"] not in bad_classes:
+
+                obj_class.append(self.label_map[i["category"]])
+
+                xmin = i["box2d"]["x1"]/ 1280 
+                xmax = i["box2d"]["x2"]/ 1280 
+                ymin = i["box2d"]["y1"]/ 720
+                ymax = i["box2d"]["y2"]/ 720
+            
+                boxes.append([xmin, ymin, xmax, ymax])
+        
+        boxes = torch.as_tensor(boxes, dtype=torch.float32)
+
+        area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
+
+        iscrowd = torch.zeros((len(obj_class),), dtype=torch.int64)
+
+        labels = torch.as_tensor(obj_class, dtype=torch.int64)
+
+        target = {}
+        target["boxes"] = boxes
+        target["labels"] = labels
+        target["image_id"] = torch.tensor([index])
+        target["area"] = area
+        target["iscrowd"] = iscrowd
+
+        if self.transform is not None:
+            img, target = self.transform(img, target)
+
+        return img, target
+
+    def set_use_cache(self, use_cache):
+
+        if use_cache:
+            self.imgs = [None for _ in range(len(self.img_locs))]
+            for img_ind, img_loc in enumerate(self.img_locs):
+                self.imgs[img_ind] = Image.open(img_loc).convert("RGB")
+            self.cached_flag = True
+        else:
+            self.imgs = None
+        
+    def pin_memory(self):
+        
+        self.data = self.data.pin_memory()
+        self.label = self.label.pin_memory()
+        
+        return self

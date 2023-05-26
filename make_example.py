@@ -35,9 +35,9 @@ n_samples = 1000
 #centers = [np.array([3,3]),np.array([1,0]),np.array([0,2])]
 #centers = [np.array([0,0.5]),np.array([0.5,0]),np.array([0,-0.5]),np.array([-0.5,0])]
 centers = [np.array([0,0]),np.array([0,0]),np.array([0,0]),np.array([0,0])]
-a_s = [0.5,0.5,0.5,0.5]
+a_s = [1.5,1.5,1.5,1.5]
 b_s = [0.5,0.5,0.5,0.5]
-n_repeat = 1
+n_repeat = 3
 n_device = len(centers)
 n_device_show = 4
 rotation_angles = [np.pi/6,np.pi/2,-np.pi/6,-np.pi/2]
@@ -61,10 +61,10 @@ for i in range(n_device*n_repeat):
     embeddings[i] = X[y==i]
     obs_inds.append(np.where(y==i)[0].tolist())
 
-sampling_policy = kCenterGreedy(embeddings,base_embeddings,obs_inds,n_iter,n_cache)
-
+sampling_policy = FacilityLocation(embeddings,base_embeddings,obs_inds,n_iter,n_cache)
 dist_inds = sampling_policy.sample_caches("Distributed")
-centr_inds = sampling_policy.sample_caches("Oracle")
+sampling_policy = FacilityLocation(embeddings,base_embeddings,obs_inds,n_iter,n_cache)
+centr_inds = sampling_policy.sample_caches("Interactive-New")
 
 X_dist = np.concatenate((X[dist_inds],base_embeddings),axis=0)
 X_centr = np.concatenate((X[centr_inds],base_embeddings),axis=0)
@@ -97,8 +97,7 @@ plt.tight_layout()
 
 
 # scatter plot of blobs
-plt.savefig("blobs.png")
-
+plt.savefig("blobs1.png")
     
 
 """
