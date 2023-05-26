@@ -247,6 +247,33 @@ class FacilityLocation:
             cache_inds.extend(cache_ind)
     
         return cache_inds
+
+    def distributed_new(self):
+
+        cache_inds = []
+
+        max_M = np.zeros((self.n_obs*self.n_device,1))
+
+        for i in range(self.n_device):
+
+            max_M[:] = self.max_M
+            Ms = self.M[:,i*(self.n_obs):(i+1)*(self.n_obs)]
+
+            cache_ind = []
+
+            for j in range(self.n_cache):
+                  
+                ind = np.argmax(np.maximum(max_M,Ms).sum(axis=0))
+
+                cache_ind.append(self.inds[i][ind])
+
+                max_M = np.maximum(max_M,Ms[:,ind].reshape(-1,1))
+                Ms[:,ind] = 0
+                Ms[ind,:] = 0
+                  
+            cache_inds.extend(cache_ind)
+    
+        return cache_inds
  
     def centralized(self):
 
@@ -342,6 +369,8 @@ class FacilityLocation:
         
         if method == 'Distributed':
             return self.distributed()
+        elif method == 'Distributed-New':
+            return self.distributed_new()
         elif method == 'Oracle':
             return self.centralized()
         elif method == 'Oracle-New':

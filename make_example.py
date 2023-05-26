@@ -62,7 +62,7 @@ for i in range(n_device*n_repeat):
     obs_inds.append(np.where(y==i)[0].tolist())
 
 sampling_policy = FacilityLocation(embeddings,base_embeddings,obs_inds,n_iter,n_cache)
-dist_inds = sampling_policy.sample_caches("Distributed")
+dist_inds = sampling_policy.sample_caches("Distributed-New")
 sampling_policy = FacilityLocation(embeddings,base_embeddings,obs_inds,n_iter,n_cache)
 centr_inds = sampling_policy.sample_caches("Interactive-New")
 

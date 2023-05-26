@@ -109,7 +109,7 @@ def run_sim(opt,device):
 
             trial_loc = create_run_dir(run_i_loc,"trial")
 
-            Distributed_Model = Sim(params,"Distributed",device,copy.deepcopy(Unc_Model.model))
+            Distributed_Model = Sim(params,"Distributed-New",device,copy.deepcopy(Unc_Model.model))
             Oracle_Model = Sim(params,"Oracle-New",device,copy.deepcopy(Unc_Model.model))
             Interactive_Model = Sim(params,"Interactive-New",device,copy.deepcopy(Unc_Model.model))
 
