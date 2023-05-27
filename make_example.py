@@ -3,6 +3,8 @@ from utils.coresets import *
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.colors import LinearSegmentedColormap
+import heapq
+import time
 
 import numpy as np
 
@@ -62,10 +64,12 @@ for i in range(n_device*n_repeat):
     embeddings[i] = X[y==i]
     obs_inds.append(np.where(y==i)[0].tolist())
 
-sampling_policy = FacilityLocation(embeddings,base_embeddings,obs_inds,n_iter,n_cache)
-dist_inds = sampling_policy.sample_caches("Distributed-New")
-sampling_policy = FacilityLocation(embeddings,base_embeddings,obs_inds,n_iter,n_cache)
-centr_inds = sampling_policy.sample_caches("Interactive-New")
+
+distributed_policy = FacilityLocation(embeddings,base_embeddings,obs_inds,n_iter,n_cache)
+dist_inds = distributed_policy.sample_caches("Distributed-Lazy")
+interactive_policy = FacilityLocation(embeddings,base_embeddings,obs_inds,n_iter,n_cache)
+centr_inds = interactive_policy.sample_caches("Interactive-Lazy")
+
 
 X_dist = np.concatenate((X[dist_inds],base_embeddings),axis=0)
 X_centr = np.concatenate((X[centr_inds],base_embeddings),axis=0)
