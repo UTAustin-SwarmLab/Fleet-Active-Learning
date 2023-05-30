@@ -85,3 +85,26 @@ for i in range(len(sim_types)):
 
 
 plot_values(Values,sim_types,save_loc=run_loc+"/submodular_values.jpg",y_label="$f(\mathcal{D}_c^r)$ Value of Submodular Objective")
+
+mean_distributed = np.mean(Values[0][:,-1])
+mean_oracle = np.mean(Values[1][:,-1])
+mean_interactive = np.mean(Values[2][:,-1])
+
+# Write it to txt file 
+with open(run_loc+"/submodular_values.txt","w") as f:
+    f.write("Distributed: "+str(mean_distributed)+"\n")
+    f.write("Oracle: "+str(mean_oracle)+"\n")
+    f.write("Interactive: "+str(mean_interactive)+"\n")
+
+# Additionally we will write the mean values of the accuracies
+
+accs = []
+for sim_type in sim_types:
+    acc = np.load(run_loc+"/"+sim_type+"_acc.npy")
+    accs.append(acc)
+
+accs = [np.mean(accs[i][:,-1]) for i in range(len(accs))]
+
+with open(run_loc+"/accs.txt","w") as f:
+    for i in range(len(accs)):
+        f.write(sim_types[i]+": "+str(accs[i])+"\n")
