@@ -9,5 +9,5 @@ Values = [np.load(run_loc+"/"+sim_type+"_submodular_values.npy") for sim_type in
 Accs = [np.load(run_loc+"/"+sim_type+"_acc.npy") for sim_type in sim_types]
 
 plot_accs(Accs,sim_types,run_loc+"/Accs.jpg")
-plot_values(Values,sim_types,run_loc+"/submodular_values.jpg",y_label="$f(\mathcal{D}_c^r)$ Submodular Objective")
+plot_values(Values,sim_types,run_loc+"/submodular_values.jpg",y_label=" Submodular Objective $f(\mathcal{D}_c^r)$")
 
