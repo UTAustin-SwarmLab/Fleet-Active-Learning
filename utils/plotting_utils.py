@@ -33,7 +33,7 @@ import plotly.express as px
 import gmplot
 
 # Creates L2-Norm Plots for the simulations
-def plot_accs(accs: list,names: list,save_loc:str) -> None:
+def plot_accs(accs: list,names: list,save_loc:str,linestyles=["--","-","-."]) -> None:
 
     """
     :param accs: Accuracy values
@@ -48,7 +48,7 @@ def plot_accs(accs: list,names: list,save_loc:str) -> None:
     for i in range(len(accs)):
         data = pd.DataFrame(accs[i].reshape(-1,1),columns=["Accuracy"])
         data["Round"] = [i for i in range(accs[i].shape[1])]* accs[i].shape[0]
-        sns.lineplot(data=data,x="Round",y="Accuracy",label=names[i],linewidth=3)
+        sns.lineplot(data=data,x="Round",y="Accuracy",label=names[i],linestyle=linestyles[i],linewidth=3)
 
     plt.grid(linestyle='--', linewidth=2)
     plt.xlabel("Round $r$",fontweight="bold" ,fontsize=24)
@@ -119,7 +119,7 @@ def make_legend(names,save_loc):
     figLegend.savefig(save_loc)
 
 # Creates L2-Norm Plots for the simulations
-def plot_values(values: list,names: list,save_loc:str,y_label:str) -> None:
+def plot_values(values: list,names: list,save_loc:str,y_label:str,linestyles=["--","-","-."]) -> None:
 
     """
     :param accs: Accuracy values
@@ -134,7 +134,7 @@ def plot_values(values: list,names: list,save_loc:str,y_label:str) -> None:
     for i in range(len(values)):
         data = pd.DataFrame(values[i].reshape(-1,1),columns=[y_label])
         data["Round"] = [i for i in range(values[i].shape[1])]* values[i].shape[0]
-        sns.lineplot(data=data,x="Round",y=y_label,label=names[i],linewidth=3)
+        sns.lineplot(data=data,x="Round",y=y_label,label=names[i],linewidth=3,linestyle=linestyles[i])
 
     plt.grid(linestyle='--', linewidth=2)
     plt.xlabel("Round $r$",fontweight="bold" ,fontsize=24)
