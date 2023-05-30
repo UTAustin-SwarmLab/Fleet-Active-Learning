@@ -38,6 +38,8 @@ def clip_obtain_embeddings(X_train,inds,train_embs,dataset_type):
         
     return embeddings
 
+sim_types = ["Distributed","Oracle","Interactive"]
+
 if not values_saved:
 
     X_train,X_test,y_train,y_test = load_datasets(dataset_loc,dataset_type,img_loc=img_loc)
@@ -51,7 +53,7 @@ if not values_saved:
 
 
     dataset_inds = []
-    sim_types = ["Distributed","Oracle","Interactive"]
+    
 
     for sim_type in sim_types:
 
