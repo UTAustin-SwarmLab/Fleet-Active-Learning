@@ -112,7 +112,7 @@ plt.scatter(X_centr[:,0],X_centr[:,1],marker="o",color="b",s=200,facecolors='non
 plt.rcParams["font.size"]=15
 plt.rcParams["axes.linewidth"]=2
 plt.rcParams["legend.labelspacing"] = 0.4
-handles = [plt.scatter([],[],marker="o",color=colors[0](1),label="Robot 1 Obsevations",s=150), 
+handles = [plt.scatter([],[],marker="o",color=colors[0](1),label="Robot 1 Observations",s=150), 
            plt.scatter([],[],marker="o",color=colors[1](1),label="Robot 2  Observations",s=150), 
            plt.scatter([],[],marker="o",color=colors[2](1),label="Robot 3  Observations",s=150),
            plt.scatter([],[],marker="x",color="r",s=200,label="Distributed Action",linewidths=5),
