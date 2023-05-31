@@ -376,7 +376,7 @@ class Sim:
 
     def clip_obtain_embeddings(self,X_train,y_train,all_inds,train_embs):
         
-        emb_size = len(train_embs[list(train_embs.keys())[0]])
+        emb_size = train_embs[list(train_embs.keys())[0]].shape[1]
         embeddings = np.zeros((len(all_inds),emb_size))
 
         if self.dataset_type == "CIFAR10":  
