@@ -104,7 +104,6 @@ sim_keys = list(dataset_inds[0].keys())
 all_inds = [i for i in range(len(X_train))]
 all_embs = clip_obtain_embeddings(X_train,all_inds,train_embs,dataset_type)
 all_emb = TSNE(n_components=2).fit_transform(all_embs)
-pbar = tqdm(total=len(sim_types)*len(sim_keys)*len(dataset_inds[0][sim_keys[0]]))
 dataset_embs = []
 
 for i in range(len(sim_types)):

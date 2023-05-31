@@ -142,9 +142,9 @@ def run_sim(opt,device):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset-loc", type=str,default="./bdd100k/labels/det_20")
-    parser.add_argument("--img-loc", type=str,default="./bdd100k/images/100k")
-    parser.add_argument("--clip-emb-loc", type=str, default= "./bdd100k/clip_embeddings")
+    parser.add_argument("--dataset-loc", type=str,default="/store/datasets/bdd100k/labels/det_20")
+    parser.add_argument("--img-loc", type=str,default="/store/datasets/bdd100k/images/100k")
+    parser.add_argument("--clip-emb-loc", type=str, default= "/store/datasets/bdd100k/clip_embeddings")
     parser.add_argument("--emb-loc", type=str, default= "/store/datasets/CIFAR10/features/resnet50")
     parser.add_argument("--gpu-no", type=int,default=0)
     parser.add_argument("--n-unique-device", type=int, default=2)
