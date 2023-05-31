@@ -23,9 +23,9 @@ def plot_tsne(train_embs,method_embs,save_loc):
     
     plt.scatter(train_embs[:,0],train_embs[:,1],color="gray",label="Training Data",alpha=0.2)
 
-    plt.scatter(method_embs[0][:,0],method_embs[0][:,1],marker="x",label="Distributed",linewidths=2,alpha=0.4,color="tab:blue")
-    plt.scatter(method_embs[1][:,0],method_embs[1][:,1],marker="+",label="Centralized",alpha=0.4,linewidths=2,color="tab:orange")
-    plt.scatter(method_embs[2][:,0],method_embs[2][:,1],marker="o",facecolors='none',alpha=0.4,label="Interactive",linewidths=2,color="tab:green")
+    plt.scatter(method_embs[0][:,0],method_embs[0][:,1],marker="x",label="Distributed",linewidths=2,alpha=0.7,color="tab:blue",s=150)
+    plt.scatter(method_embs[1][:,0],method_embs[1][:,1],marker="+",label="Centralized",alpha=0.7,linewidths=2,color="tab:orange",s=150)
+    plt.scatter(method_embs[2][:,0],method_embs[2][:,1],marker="o",facecolors='none',alpha=0.7,label="Interactive",linewidths=2,color="tab:green",s=150)
     
     plt.rcParams["font.size"]=15
     plt.rcParams["axes.linewidth"]=2
@@ -34,7 +34,7 @@ def plot_tsne(train_embs,method_embs,save_loc):
     handles = [plt.scatter([],[],marker="o",color="gray",label="Training Data",s=150), 
            plt.scatter([],[],marker="x",color="tab:blue",label="Distributed",s=200), 
            plt.scatter([],[],marker="+",color="tab:orange",label="Centralized",s=200),
-           plt.scatter([],[],marker="o",color="tab:green",s=200,label="Interactive")]
+           plt.scatter([],[],marker="o",facecolors='none',color="tab:green",s=200,label="Interactive")]
     legend = plt.legend(handles=handles,frameon=True,loc='upper left',bbox_to_anchor=(-0.1, 1.1))
 
     for text in legend.get_texts():
