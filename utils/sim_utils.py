@@ -37,7 +37,6 @@ from utils.model_utils import *
 from utils.dataset_utils import *
 from utils.coresets import *
 
-
 class Sim:
     def __init__(self,params,sim_type,device,model):
 
@@ -120,7 +119,7 @@ class Sim:
                 else:
                     N_x[arg] += int(n_cache_cand[g])
                     n_lim = n_lim - int(n_cache_cand[g]) 
-              
+            
         for i,c_i in enumerate(base_classes):
             ind_s = random.sample(np.argwhere(y == c_i).reshape(-1).tolist(), k = N_x[i])
             inds.extend(ind_s)
@@ -201,6 +200,23 @@ class Sim:
         
         return obs_ind
 
+    def create_det_obs_ind(self,y,sim_i):
+    
+        np.random.seed(sim_i)
+        random.seed(sim_i)
+
+        obs_ind = [[] for i in range(self.n_rounds)]
+
+        for round_i in range(self.n_rounds):
+            obs_ind[round_i] = [[] for i in range(self.n_device)]
+            for dev_i in range(self.params["n_unique_device"]):
+                obs_ind[round_i][dev_i*self.params["n_same_device"]] = random.sample([i for i in range(len(y))],k=self.n_obs)
+                for same_i in range(1,self.params["n_same_device"]):
+                    obs_ind[round_i][dev_i*self.params["n_same_device"]+same_i] = obs_ind[round_i][dev_i*self.params["n_same_device"]].copy()
+        
+        return obs_ind
+
+
     # Creates dataset for intereference
     def create_dataset(self,X,y):
         if self.dataset_type == "MNIST":
@@ -227,6 +243,13 @@ class Sim:
                 trfm.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
                 ])
                 dataset = AdversarialWeatherDataset(X,y,transform,self.params["cache_all"])
+        elif self.dataset_type == "DeepDrive-Detection":
+            transforms = []
+            transforms.append(T.PILToTensor())
+            transforms.append(T.ConvertImageDtype(torch.float))
+            transform = T.Compose(transforms)
+            dataset = DetectionDataset(X,y,transform)
+
         return dataset
 
     # Creates dataset for training
@@ -363,7 +386,7 @@ class Sim:
             for i in range(len(embeddings)):
                 embeddings[i] = train_embs["/".join(X_train[all_inds[i]].split("/")[-4:])]
         
-        elif self.dataset_type == "DeepDrive":
+        elif self.dataset_type == "DeepDrive" or self.dataset_type == "DeepDrive-Detection":
             for i in range(len(embeddings)):
                 embeddings[i] = train_embs[X_train[all_inds[i]].split("/")[-1]]
         
@@ -405,6 +428,9 @@ class Sim:
             else:
                 self.model.fc = nn.Linear(self.model.emb_size,self.n_class).to(self.device)
                 self.model.fc.apply(init_weights)
+        if self.dataset_type == "DeepDrive-Detection":
+            self.model = get_model("DeepDrive-Detection","DeepDrive-Detection",
+                                self.model.device,self.model.b_size,self.model.n_epoch,self.model.lr,self.model.n_class)
 
     def sim_round(self,sim_i,sim_seed,X_train,y_train,testset,base_inds,obs_ind,train_embs):
 
@@ -494,3 +520,117 @@ class Sim:
 
         with open(save_loc+'/'+sim_type+'_params.json', 'w') as outfile:
             json.dump(self.params, outfile)
+
+class Sim_Detect(Sim):
+    def __init__(self,params,sim_type,device,model,init_results):
+        super().__init__(params,sim_type,device,model)
+        self.precision = np.zeros((self.n_sim,self.n_rounds+1))
+        self.recall = np.zeros((self.n_sim,self.n_rounds+1))
+        self.map50 = np.zeros((self.n_sim,self.n_rounds+1))
+        self.map50_95 = np.zeros((self.n_sim,self.n_rounds+1))
+        self.fitness = np.zeros((self.n_sim,self.n_rounds+1))
+        self.init_results = init_results
+    
+    def metrics_update(self,metrics,round_i):
+
+        self.precision[self.sim_i,round_i+1] = metrics["metrics/precision(B)"]
+        self.recall[self.sim_i,round_i+1] = metrics["metrics/recall(B)"]
+        self.map50[self.sim_i,round_i+1] = metrics["metrics/mAP50(B)"]
+        self.map50_95[self.sim_i,round_i+1] = metrics["metrics/mAP50-95(B)"]
+        self.fitness[self.sim_i,round_i+1] = metrics["fitness"]
+
+    def sim_round(self,sim_i,sim_seed,X_train,y_train,testset,base_inds,obs_ind,train_embs):
+
+        self.sim_i = sim_i
+        self.sim_seed = sim_seed
+        self.obs_ind[sim_seed] = obs_ind
+
+        random.seed(sim_seed)
+        np.random.seed(sim_seed)
+        self.seeds.append(sim_seed)
+
+        self.set_base_inds(base_inds[0],sim_seed)
+
+        self.metrics_update(self.init_results,-1)
+        
+        for round_i in range(self.n_rounds):
+
+            if self.unc_type in ["Entropy","LeastConfidence","MarginSampling","Random"]:
+
+                all_indices = list()
+                for i in range(self.n_device):
+                    all_indices.extend(obs_ind[round_i][i])
+                
+                all_indices = list(set(all_indices))
+
+                logits = self.obtain_logits(X_train,y_train,all_indices)
+
+                scores = self.unc_scores(logits)
+
+                cached_inds = self.cache_inds(all_indices,obs_ind[round_i],scores)
+            
+            else:
+
+                # Obtains unique indices for all devices
+                all_indices = list()
+                for i in range(self.n_device):
+                    all_indices.extend(obs_ind[round_i][i])
+                all_indices.extend(self.dataset_ind[sim_seed][-1])
+                
+                all_indices = list(set(all_indices))
+
+                # Obtains embeddings for these unique indices
+
+                if self.unc_type == "coreset":
+                    embeddings = self.coreset_obtain_embeddings(X_train,y_train,all_indices)
+                elif self.unc_type == "badge":
+                    embeddings = self.badge_obtain_embeddings(X_train,y_train,all_indices)
+                elif self.unc_type == "clip":
+                    embeddings = self.clip_obtain_embeddings(X_train,y_train,all_indices,train_embs)
+
+                embeddings, base_embeddings = self.map_embeddings_devices(embeddings,all_indices,obs_ind[round_i],self.dataset_ind[sim_seed][-1])
+                
+                if self.params["center_selection"]=="kcenter":
+                    sampling_policy = kCenterGreedy(embeddings,base_embeddings,obs_ind[round_i],self.n_iter,self.n_cache)
+                elif self.params["center_selection"]=="facility":
+                    sampling_policy = FacilityLocation(embeddings,base_embeddings,obs_ind[round_i],self.n_iter,self.n_cache)
+                else:
+                    raise ValueError("Invalid Center Selection Type")
+                cached_inds = sampling_policy.sample_caches(self.sim_type)
+
+            self.dataset_ind[sim_seed].append(self.dataset_ind[sim_seed][-1] + cached_inds)
+
+            trainset = create_detection_dataset(X_train[tuple([list(set(self.dataset_ind[self.sim_seed][-1]))])],testset)
+            train_model(self.model,trainset,converge=self.params["converge"],only_final=self.params["train_only_final"],detection=True,params=self.params,device=self.device)
+
+            metrics =  test_model(self.model,testset,self.params["test_b_size"],detection=True)
+            self.metrics_update(metrics,round_i)
+
+    def save_infos(self,save_loc,sim_type):
+
+        with open(save_loc+'/'+sim_type+'_params.json', 'w') as outfile:
+            json.dump(self.params, outfile)
+    
+        with open(save_loc+'/'+sim_type+'_dataset_ind.json', 'w') as outfile:
+            json.dump(self.dataset_ind, outfile)
+
+        with open(save_loc+'/'+sim_type+'_obs_ind.json', 'w') as outfile:
+            json.dump(self.obs_ind, outfile)
+
+        with open(save_loc+'/'+sim_type+'_seeds.json', 'w') as outfile:
+            json.dump(self.seeds, outfile)
+
+        with open(save_loc+'/'+sim_type+'_precision.npy', 'wb') as outfile:
+            np.save(outfile, self.precision)
+        
+        with open(save_loc+'/'+sim_type+'_recall.npy', 'wb') as outfile:
+            np.save(outfile, self.recall)
+        
+        with open(save_loc+'/'+sim_type+'_map50.npy', 'wb') as outfile:
+            np.save(outfile, self.map50)
+        
+        with open(save_loc+'/'+sim_type+'_map50_95.npy', 'wb') as outfile:
+            np.save(outfile, self.map50_95)
+        
+        with open(save_loc+'/'+sim_type+'_fitness.npy', 'wb') as outfile:
+            np.save(outfile, self.fitness)

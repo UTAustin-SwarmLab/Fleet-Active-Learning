@@ -8,7 +8,7 @@ import os
 from utils.cifar10 import *
 from utils.adversarialweather import *
 import torchvision.models as vsmodels
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from ultralytics_yolo.ultralytics import YOLO
 
 # Function to initialize weights
 def init_weights(m):
@@ -28,7 +28,7 @@ def init_weights(m):
         nn.init.constant_(m.bias.data, 0.01)
 
 # Function to get model accuracy
-def test_model(model,test_dataset,b_size:int=100,class_normalized:bool=True) -> float:
+def test_model(model,test_dataset,b_size:int=100,class_normalized:bool=True,detection:bool=False) -> float:
     """
     Tests the model on the test dataset
     :param model: Model to be tested
@@ -36,6 +36,11 @@ def test_model(model,test_dataset,b_size:int=100,class_normalized:bool=True) -> 
     :param test_b_size: Batch size for the test dataset
     :return: Accuracy of the model
     """
+
+    if detection:
+        metrics = model.val(batch=b_size)
+        return metrics.results_dict
+
     model.eval()
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=b_size)
     correct = [0 for i in range(model.n_class)]
@@ -58,7 +63,7 @@ def test_model(model,test_dataset,b_size:int=100,class_normalized:bool=True) -> 
         return sum(correct)/sum(total)
 
 # Function to train model
-def train_model(model,train_dataset,silent:bool=True,converge:bool=False,only_final:bool=False):
+def train_model(model,train_dataset,silent:bool=True,converge:bool=False,only_final:bool=False,detection:bool=False,params=None,device=None):
     """
     Trains the model on the train dataset
     :param model: Model to be trained
@@ -66,6 +71,13 @@ def train_model(model,train_dataset,silent:bool=True,converge:bool=False,only_fi
     :param silent: If True, no progress bar is shown
     :param converge: If True, the model is trained till convergence
     """
+
+    if detection:
+
+        model.train(data=train_dataset,epochs=params["n_epoch"],save=False,device=device, val=False,pretrained=True,
+        batch=params["b_size"],verbose=False,plots=False)
+
+        return 
 
     model.train()
 
@@ -94,6 +106,8 @@ def train_model(model,train_dataset,silent:bool=True,converge:bool=False,only_fi
         best_acc = 0
         attempts = 0
         epoch = 1
+
+
 
     if not converge:
         for epoch in pbar:
@@ -153,7 +167,7 @@ def train_model(model,train_dataset,silent:bool=True,converge:bool=False,only_fi
     
 # Function to get model
 def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,lr:float=0.001,n_class:int=5,
-              use_embs:bool=False,n_features:int=2048):
+            use_embs:bool=False,n_features:int=2048):
     """
     Returns the model
     :param model_name: Name of the model
@@ -182,15 +196,14 @@ def get_model(model_name,dataset_name:str,device,b_size:int=100,n_epoch:int=100,
             model.fc = nn.Linear(num_features,n_class)
             model.emb_size = num_features
     elif model_name == "DeepDrive-Detection":
-        model = vsmodels.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-        in_features = model.roi_heads.box_predictor.cls_score.in_features
-        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+        model = YOLO("yolov8s.yaml")
+        return model
     else:
         raise ValueError("Model not found")
-    
     model.device = device
     model.to(device)
-    model.apply(init_weights)
+    if model_name != "DeepDrive-Detection":
+        model.apply(init_weights)
     model.loss_fn = nn.CrossEntropyLoss()
     model.dataset_name = dataset_name
     model.model_name = model_name
@@ -227,3 +240,4 @@ def load_model(model,loc:str):
     model.load_state_dict(torch.load(loc))
 
     return model
+

@@ -118,6 +118,36 @@ def make_legend(names,save_loc):
     figLegend.savefig(save_loc)
 
 
+# Creates L2-Norm Plots for the simulations
+def plot_values(values: list,names: list,save_loc:str,y_label:str) -> None:
+
+    """
+    :param accs: Accuracy values
+    :param names: Names of the algorithms
+    :param save_loc: Location to save the plot
+    :return: None
+    """
+
+    plt.close("all")
+    fig, ax = plt.subplots(figsize=(7,7),dpi=600)
+
+    for i in range(len(values)):
+        data = pd.DataFrame(values[i].reshape(-1,1),columns=[y_label])
+        data["Round"] = [i for i in range(values[i].shape[1])]* values[i].shape[0]
+        sns.lineplot(data=data,x="Round",y=y_label,label=names[i],linewidth=3)
+
+    plt.grid(linestyle='--', linewidth=2)
+    plt.xlabel("Round $r$",fontweight="bold" ,fontsize=24)
+    plt.ylabel(y_label,fontweight="bold" ,fontsize=24)
+
+    plt.rcParams["font.size"]=18
+    plt.rcParams["axes.linewidth"]=2
+    ax.xaxis.set_tick_params(labelsize=14)
+    ax.yaxis.set_tick_params(labelsize=14)
+    plt.legend(prop=dict(size=20,weight='bold'))
+    plt.tight_layout()
+    plt.legend([],[], frameon=False)
+    plt.savefig(save_loc)
 
 
 

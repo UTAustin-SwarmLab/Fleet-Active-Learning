@@ -6,3 +6,5 @@ conv_opt/
 *.pyc
 plots/
 logs/
+bdd100k/
+datasets/
