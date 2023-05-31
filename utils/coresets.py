@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.metrics import pairwise_distances
 import random
 from copy import deepcopy
+import heapq
 
 class kCenterGreedy:
 
@@ -275,6 +276,41 @@ class FacilityLocation:
     
         return cache_inds
  
+    def distributed_lazy(self):
+
+        cache_inds = []
+
+        max_M = np.zeros((self.n_obs*self.n_device,1))
+
+        for i in range(self.n_device):
+
+            max_M[:] = self.max_M
+            Ms = self.M[:,i*(self.n_obs):(i+1)*(self.n_obs)]
+
+            cache_ind = []
+
+            marginal_contrib = -(np.maximum(max_M,Ms).sum(axis=0) - max_M.sum())
+
+            marg_contr = [(marginal_contrib[i],i) for i in range(self.n_obs)]
+
+            heapq.heapify(marg_contr)
+
+            for j in range(self.n_cache):
+                
+                while 1:
+                    cur_el = heapq.heappop(marg_contr)
+                    cur_contr = -(np.maximum(max_M,Ms[:,cur_el[1]].reshape(-1,1)).sum() - max_M.sum())
+                    if cur_contr <= marg_contr[0][0]:
+                        cache_ind.append(self.inds[i][cur_el[1]])
+                        max_M = np.maximum(max_M,Ms[:,cur_el[1]].reshape(-1,1))
+                        break
+                    else:
+                        heapq.heappush(marg_contr,(cur_contr,cur_el[1]))
+                  
+            cache_inds.extend(cache_ind)
+    
+        return cache_inds
+ 
     def centralized(self):
 
         n_caches = [0 for i in range(self.n_device)]
@@ -339,6 +375,37 @@ class FacilityLocation:
         
         return cache_inds
 
+    def centralized_lazy(self):
+
+        n_caches = [0 for i in range(self.n_device)]
+
+        cache_inds = []
+
+        max_M = self.max_M
+
+        marginal_contrib = -(np.maximum(max_M,self.M).sum(axis=0) - max_M.sum())
+
+        marg_contr = [(marginal_contrib[i],i,i//self.n_obs) for i in range(self.n_obs*self.n_device)]
+
+        heapq.heapify(marg_contr)
+
+        for j in range(self.n_cache * self.n_device):
+
+            while 1:
+                cur_el = heapq.heappop(marg_contr)
+                if n_caches[cur_el[2]] == self.n_cache:
+                    continue
+                cur_contr = -(np.maximum(max_M,self.M[:,cur_el[1]].reshape(-1,1)).sum() - max_M.sum())
+                if cur_contr <= marg_contr[0][0]:
+                    cache_inds.append(self.inds[cur_el[2]][cur_el[1]%self.n_obs])
+                    max_M = np.maximum(max_M,self.M[:,cur_el[1]].reshape(-1,1))
+                    n_caches[cur_el[2]] += 1
+                    break
+                else:
+                    heapq.heappush(marg_contr,(cur_contr,cur_el[1],cur_el[2]))
+        
+        return cache_inds
+
     def iterative(self):
         "Returns a coreset of size n_cache x n_device samples"
 
@@ -364,21 +431,56 @@ class FacilityLocation:
                 
 
         return cache_inds
-  
+
+    def iterative_lazy(self):
+        "Returns a coreset of size n_cache x n_device samples"
+
+        # Initialize set of caches from scratch
+
+        cache_inds = []
+        max_M  = self.max_M
+        for i in range(self.n_device):
+            M = self.M[:,i*(self.n_obs):(i+1)*(self.n_obs)]
+
+            marginal_contrib = -(np.maximum(max_M,M).sum(axis=0) - max_M.sum())
+
+            marg_contr = [(marginal_contrib[i],i) for i in range(self.n_obs)]
+
+            heapq.heapify(marg_contr)
+
+            for j in range(self.n_cache):
+
+                while 1:
+                    cur_el = heapq.heappop(marg_contr)
+                    cur_contr = -(np.maximum(max_M,M[:,cur_el[1]].reshape(-1,1)).sum() - max_M.sum())
+                    if cur_contr <= marg_contr[0][0]:
+                        cache_inds.append(self.inds[i][cur_el[1]])
+                        max_M = np.maximum(max_M,M[:,cur_el[1]].reshape(-1,1))
+                        break
+                    else:
+                        heapq.heappush(marg_contr,(cur_contr,cur_el[1]))
+        return cache_inds
+
     def sample_caches(self, method='Distributed'):
         
         if method == 'Distributed':
             return self.distributed()
         elif method == 'Distributed-New':
             return self.distributed_new()
+        elif method == 'Distributed-Lazy':
+            return self.distributed_lazy()
         elif method == 'Oracle':
             return self.centralized()
         elif method == 'Oracle-New':
             return self.centralized_new()
+        elif method == 'Oracle-Lazy':
+            return self.centralized_lazy()
         elif method == 'Interactive':
             return self.iterative()
         elif method == 'Interactive-New':
             return self.iterative()
+        elif method == 'Interactive-Lazy':
+            return self.iterative_lazy()
         else:
             raise ValueError('Method not supported')
        

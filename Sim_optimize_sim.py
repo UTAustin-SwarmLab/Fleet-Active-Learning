@@ -11,23 +11,9 @@ from utils.model_utils import *
 from utils.sim_utils import *
 from utils.plotting_utils import *
 
-def run_sim(opt,device):
+def optimize_sim(opt,device,X_train,y_train,test_data,train_embs):
 
-    X_train,X_test,y_train,y_test = load_datasets(opt.dataset_loc,opt.dataset_type,img_loc=opt.img_loc,emb_loc=opt.emb_loc,use_embs=opt.use_embeddings)
-
-    if opt.unc_type == "clip":
-        if opt.dataset_type == "AdversarialWeather":
-            embs = np.load(opt.clip_emb_loc+"/clip_embs.npy",allow_pickle=True).item()
-            train_embs = {"/".join(X_train[i].split("/")[-4:]): embs["/".join(X_train[i].split("/")[-4:])]
-                           for i in  range(len(X_train))}
-        else:
-            train_embs = np.load(opt.clip_emb_loc+"/train_embs.npy",allow_pickle=True).item()
-    else:
-        train_embs = None
-    
     n_class = len(np.unique(y_train))
-
-    test_data = create_datasets(X_test,y_test,opt.dataset_type,cache_in_first=opt.cache_in_first,use_embs=opt.use_embeddings)
 
     if opt.use_embeddings:
         n_features = X_train.shape[1]
@@ -182,4 +168,18 @@ if __name__ == "__main__":
 
     print('Using torch %s %s' % (torch.__version__, torch.cuda.get_device_properties(opt.gpu_no) if torch.cuda.is_available() else 'CPU'))
 
-    run_sim(opt,device)
+    X_train,X_test,y_train,y_test = load_datasets(opt.dataset_loc,opt.dataset_type,img_loc=opt.img_loc,emb_loc=opt.emb_loc,use_embs=opt.use_embeddings)
+
+    if opt.unc_type == "clip":
+        if opt.dataset_type == "AdversarialWeather":
+            embs = np.load(opt.clip_emb_loc+"/clip_embs.npy",allow_pickle=True).item()
+            train_embs = {"/".join(X_train[i].split("/")[-4:]): embs["/".join(X_train[i].split("/")[-4:])]
+                           for i in  range(len(X_train))}
+        else:
+            train_embs = np.load(opt.clip_emb_loc+"/train_embs.npy",allow_pickle=True).item()
+    else:
+        train_embs = None
+    
+    test_data = create_datasets(X_test,y_test,opt.dataset_type,cache_in_first=opt.cache_in_first,use_embs=opt.use_embeddings)
+    
+    optimize_sim(opt,device,X_train,y_train,test_data,train_embs)

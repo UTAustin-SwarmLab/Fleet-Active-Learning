@@ -203,4 +203,3 @@ def create_run_dir(run_loc,name="run"):
 
     os.makedirs(run_loc+"/"+name+str(run_i))
     return run_loc+"/"+name+str(run_i)
-

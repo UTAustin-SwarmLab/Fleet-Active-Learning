@@ -1,156 +1,118 @@
-
-from utils.coresets import *
-import matplotlib.pyplot as plt
-import seaborn as sns
-from matplotlib.colors import LinearSegmentedColormap
-import heapq
-import time
-
 import numpy as np
+from tqdm import tqdm
+import torch
+import argparse
+import torch
+import copy
+from sklearn.metrics import pairwise_distances
+from sklearn.manifold import TSNE
 
-def generate_random_points_within_rotated_ellipse(a, b, center, num_points,rotation_angle=0):
-    points = []
-    while len(points) < num_points:
-        # Generate random point within a unit circle
-        theta = np.random.uniform(0, 2*np.pi)
-        r = np.sqrt(np.random.uniform(0, 1))
-        x = r * np.cos(theta)
-        y = r * np.sin(theta)
-        
-        # Scale the random point to fit within the ellipse
-        x *= a
-        y *= b
-        
-        # Rotate the point
-        rotation_matrix = np.array([[np.cos(rotation_angle), -np.sin(rotation_angle)],
-                                    [np.sin(rotation_angle), np.cos(rotation_angle)]])
-        point = np.dot(rotation_matrix, [x, y])
-        points.append(point+center)
-    return points
+from utils.general_utils import *
+from utils.dataset_utils import *
+from utils.model_utils import *
+from utils.sim_utils import *
+from utils.plotting_utils import *
 
 
+def plot_tsne(train_embs,method_embs,save_loc):
 
-n_iter = 3
-n_cache = 4
-n_samples = 1000
+    fig, ax = plt.subplots(figsize=(8,7),dpi=600)
+    # plot the distribution of the data points with gray color
 
-
-#centers = [np.array([3,3]),np.array([1,0]),np.array([0,2])]
-#centers = [np.array([0,0.5]),np.array([0.5,0]),np.array([0,-0.5]),np.array([-0.5,0])]
-centers = [np.array([0,0]),np.array([0,0]),np.array([0,0])]
-a_s = [1.5,1.5,1.5]
-b_s = [0.5,0.5,0.5]
-n_repeat = 3
-n_device = len(centers)
-n_device_show = len(centers)
-rotation_angles = [np.pi/6,np.pi/2,-np.pi/6]
-
-X = np.zeros((0,2))
-y = np.zeros((0))
-for j in range(n_repeat):
-    for i in range(len(centers)):
-        X = np.concatenate((X,generate_random_points_within_rotated_ellipse(a_s[i], b_s[i],centers[i], n_samples,rotation_angles[i])),axis=0)
-        y = np.concatenate((y,np.ones((n_samples))*i+j*len(centers)),axis=0)
-
-X_b = X.copy()
-y_b = y.copy()
-
-base_embeddings = np.zeros((1,2))
-embeddings = np.zeros((n_device*n_repeat,n_samples,2))
-obs_inds = []
-
-
-for i in range(n_device*n_repeat):
-    embeddings[i] = X[y==i]
-    obs_inds.append(np.where(y==i)[0].tolist())
-
-
-distributed_policy = FacilityLocation(embeddings,base_embeddings,obs_inds,n_iter,n_cache)
-dist_inds = distributed_policy.sample_caches("Distributed-Lazy")
-interactive_policy = FacilityLocation(embeddings,base_embeddings,obs_inds,n_iter,n_cache)
-centr_inds = interactive_policy.sample_caches("Interactive-Lazy")
-
-
-X_dist = np.concatenate((X[dist_inds],base_embeddings),axis=0)
-X_centr = np.concatenate((X[centr_inds],base_embeddings),axis=0)
-
-# Now we plot the selected points and the original dataset
-# The original dataset is colored by a cluster and the selected points are colored by a different color
-
-sns.set_style('darkgrid')
-
-fig, ax = plt.subplots(figsize=(8,7),dpi=600)
-# plot the distribution of the data points with gray color
-
-legends = ["Robot %d"%(i+1) for i in range(n_device_show)]
-
-obs_inds = np.stack(obs_inds).reshape(-1)
-
-#for i in range(n_device_show):
-#    plt.scatter(X[obs_inds[i],0],X[obs_inds[i],1],c=y[obs_inds[i]],cmap="Oranges",label=legends[i])
-colors = plt.cm.get_cmap('Greens',5)
-colors =  [plt.cm.get_cmap("Blues",3),plt.cm.get_cmap("Oranges",4),plt.cm.get_cmap("Greens",4)]
-#sc = plt.scatter(X[obs_inds[:n_device_show*n_samples],0],X[:n_device_show*n_samples,1],c=y[obs_inds[:n_device_show*n_samples]]+1,cmap="Greens")
-#color=colors(i+1)
-for i in range(n_device_show):
-    plt.scatter(X[obs_inds[i*n_samples:(i+1)*n_samples],0],X[obs_inds[i*n_samples:(i+1)*n_samples],1],color=colors[i](1),label=legends[i])
-
-#sc = plt.scatter(X[obs_inds[:n_device_show*n_samples],0],X[:n_device_show*n_samples,1],c=y[obs_inds[:n_device_show*n_samples]])
-
-# Adjust the colormap normalization
-#norm = plt.Normalize(0, 5)
-#sc.set_norm(norm)
-
-plt.scatter(X_dist[:,0],X_dist[:,1],marker="x",color="r",s=200,label="Distributed",linewidths=5)
-plt.scatter(X_centr[:,0],X_centr[:,1],marker="o",color="b",s=200,facecolors='none',label="Oracle",linewidths=5)
-
-#plt.legend(loc="lower left",fontsize=20)
-#plt.legend(labels=["Robot 1","Robot 2"])
-#plt.ylabel("Feature 2",fontweight="bold" ,fontsize=22)
-#plt.xlabel("Feature 1",fontweight="bold" ,fontsize=22)
-
-plt.rcParams["font.size"]=15
-plt.rcParams["axes.linewidth"]=2
-plt.rcParams["legend.labelspacing"] = 0.4
-handles = [plt.scatter([],[],marker="o",color=colors[0](1),label="Robot 1 Observations",s=150), 
-           plt.scatter([],[],marker="o",color=colors[1](1),label="Robot 2  Observations",s=150), 
-           plt.scatter([],[],marker="o",color=colors[2](1),label="Robot 3  Observations",s=150),
-           plt.scatter([],[],marker="x",color="r",s=200,label="Distributed Action",linewidths=5),
-           plt.scatter([],[],marker="o",color="b",s=200,facecolors='none',label="Interactive Action",linewidths=5)]
-legend = plt.legend(handles=handles,frameon=True,loc='upper left',bbox_to_anchor=(-0.1, 1.1))
-
-
-for text in legend.get_texts():
-    text.set_weight('bold')
-
-ax.xaxis.set_tick_params(labelsize=14)
-ax.yaxis.set_tick_params(labelsize=14)
-#plt.gca().set_axis_off()
-#plt.axis('off')
-plt.tick_params(axis='both', left=False, top=False, right=False, bottom=False, labelleft=False, labeltop=False, labelright=False, labelbottom=False)
-#sns.set_style('dark')
-plt.axis('off')
-plt.tight_layout()
-
-
-
-
-"""
-# Remove x and y axes
-plt.gca().spines['left'].set_visible(False)
-plt.gca().spines['bottom'].set_visible(False)
-
-# Remove bounding box
-plt.gca().spines['right'].set_visible(False)
-plt.gca().spines['top'].set_visible(False)
-
-# Remove ticks
-plt.tick_params(axis='both', which='both', bottom=False, left=False, labelbottom=False, labelleft=False)
-"""
-
-# scatter plot of blobs
-plt.savefig("blobs1.png")
+    sns.color_palette("tab10")
     
+    plt.scatter(train_embs[:,0],train_embs[:,1],color="gray",label="Training Data",alpha=0.2)
+
+    plt.scatter(method_embs[0][:,0],method_embs[0][:,1],marker="x",label="Distributed",linewidths=2,alpha=0.4,color="tab:blue")
+    plt.scatter(method_embs[1][:,0],method_embs[1][:,1],marker="+",label="Centralized",alpha=0.4,linewidths=2,color="tab:orange")
+    plt.scatter(method_embs[2][:,0],method_embs[2][:,1],marker="o",facecolors='none',alpha=0.4,label="Interactive",linewidths=2,color="tab:green")
+    
+    plt.rcParams["font.size"]=15
+    plt.rcParams["axes.linewidth"]=2
+    plt.rcParams["legend.labelspacing"] = 0.4
+
+    handles = [plt.scatter([],[],marker="o",color="gray",label="Training Data",s=150), 
+           plt.scatter([],[],marker="x",color="tab:blue",label="Distributed",s=200), 
+           plt.scatter([],[],marker="+",color="tab:orange",label="Centralized",s=200),
+           plt.scatter([],[],marker="o",color="tab:green",s=200,label="Interactive")]
+    legend = plt.legend(handles=handles,frameon=True,loc='upper left',bbox_to_anchor=(-0.1, 1.1))
+
+    for text in legend.get_texts():
+        text.set_weight('bold')
+
+    ax.xaxis.set_tick_params(labelsize=14)
+    ax.yaxis.set_tick_params(labelsize=14)
+
+    plt.tick_params(axis='both', left=False, top=False, right=False, bottom=False, labelleft=False, labeltop=False, labelright=False, labelbottom=False)
+
+    plt.axis('off')
+    plt.tight_layout()
+
+    plt.savefig(save_loc)
+    
+
+dataset_loc = "/store/datasets/CIFAR10"
+dataset_type = "CIFAR10"
+img_loc = "/store/datasets/CIFAR10"
+clip_emb_loc = "/store/datasets/CIFAR10"
+run_loc = "./runs/CIFAR10/run7"
+
+values_saved = False
+
+def clip_obtain_embeddings(X_train,inds,train_embs,dataset_type):
+        
+    emb_size = train_embs[list(train_embs.keys())[0]].shape[1]
+    embeddings = np.zeros((len(inds),emb_size))
+
+    if dataset_type == "CIFAR10" or dataset_type == "MNIST":  
+        for i in range(len(embeddings)):
+            embeddings[i] = train_embs[inds[i]]
+    elif dataset_type == "AdversarialWeather":
+        for i in range(len(embeddings)):
+            embeddings[i] = train_embs["/".join(X_train[inds[i]].split("/")[-4:])]
+        
+    elif dataset_type == "DeepDrive":
+        for i in range(len(embeddings)):
+            embeddings[i] = train_embs[X_train[inds[i]].split("/")[-1]]
+        
+    return embeddings
+
+sim_types = ["Distributed","Oracle","Interactive"]
+
+X_train,X_test,y_train,y_test = load_datasets(dataset_loc,dataset_type,img_loc=img_loc)
+
+if dataset_type == "AdversarialWeather":
+    embs = np.load(clip_emb_loc+"/clip_embs.npy",allow_pickle=True).item()
+    train_embs = {"/".join(X_train[i].split("/")[-4:]): embs["/".join(X_train[i].split("/")[-4:])]
+                        for i in  range(len(X_train))}
+else:
+    train_embs = np.load(clip_emb_loc+"/train_embs.npy",allow_pickle=True).item()
+
+
+dataset_inds = []
+
+
+for sim_type in sim_types:
+
+    with open(run_loc+"/"+sim_type+"_dataset_ind.json") as f:
+        dataset_ind = json.load(f)
+    
+    dataset_inds.append(dataset_ind)
+
+sim_keys = list(dataset_inds[0].keys())
+
+all_inds = [i for i in range(len(X_train))]
+all_embs = clip_obtain_embeddings(X_train,all_inds,train_embs,dataset_type)
+all_emb = TSNE(n_components=2).fit_transform(all_embs)
+pbar = tqdm(total=len(sim_types)*len(sim_keys)*len(dataset_inds[0][sim_keys[0]]))
+dataset_embs = []
+
+for i in range(len(sim_types)):
+    dataset_ind = dataset_inds[i][sim_keys[0]][-1].copy()
+    dataset_emb = all_embs[dataset_ind]
+    dataset_embs.append(dataset_emb)
+
+plot_tsne(all_embs,dataset_embs,run_loc+"/tsne.jpg")
 
 """
 n_centers = 3

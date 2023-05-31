@@ -13,10 +13,10 @@ from utils.plotting_utils import *
 import clip
 from PIL import Image
 
-device = "cuda:4" if (torch.cuda.is_available()) else "cpu"
+device = "cuda:0" if (torch.cuda.is_available()) else "cpu"
 
 # load model and image preprocessing
-model, preprocess = clip.load("RN50", device=device, jit=False)
+model, preprocess = clip.load("ViT-L/14@336px", device=device, jit=False)
 
 # Process images from DeepDrive dataset 
 dataset_loc = "/store/datasets/bdd100k/images/100k"

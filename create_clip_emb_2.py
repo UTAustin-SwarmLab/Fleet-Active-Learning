@@ -22,6 +22,8 @@ model, preprocess = clip.load("RN50", device=device, jit=False)
 # Process images from DeepDrive dataset 
 
 save_dir = "/store/datasets/AdversarialWeather"
+img_loc = "/store/datasets/AdversarialWeather/Recordings"
+
 
 with open(save_dir+"/daytime_labels.json","r") as file:
     daytime_labels = json.load(file)
@@ -30,6 +32,7 @@ with open(save_dir+"/weather_labels.json","r") as file:
     weather_labels = json.load(file)
 
 img_locs = list(daytime_labels.keys())
+img_locs = list(map(lambda x:img_loc+"/"+x,img_locs))
 
 # load image
 image = Image.open(img_locs[0])
