@@ -177,13 +177,13 @@ class kCenterGreedy:
         
     def sample_caches(self, method='Distributed'):
         
-        if method == 'Distributed':
+        if method == 'Distributed' or method == 'Distributed-New' or method == 'Distributed-Lazy':
             return self.distributed_coreset()
-        elif method == 'Oracle':
+        elif method == 'Oracle' or method == 'Oracle-New' or method == 'Oracle-Lazy':
             return self.oracle_greedy()
         elif method == 'Interactive':
             return self.iterative_distributed()
-        elif method == "Interactive-New":
+        elif method == "Interactive-New" or method == "Interactive-Lazy":
             return self.iterative_new()
         else:
             raise ValueError('Method not supported')
