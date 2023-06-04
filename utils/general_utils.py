@@ -123,7 +123,7 @@ def combine_det_sims(run_ids,run_loc,target_run_loc,sim_types,name="run"):
         seeds = list()
         obs_ind = dict()
         dataset_ind = dict()
-        Metrics[sim_type] = [np.zeros((len(run_ids),params["n_rounds"]+1)) for i in range(len(metrics))]
+        Metrics[sim_type] = [np.zeros((len(run_ids),2)) for i in range(len(metrics))]
         tot_sim = 0
         
         for i,run_i in enumerate(run_ids):
