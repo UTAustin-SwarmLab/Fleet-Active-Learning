@@ -624,7 +624,7 @@ class Sim_Detect(Sim):
         self.model.train(data=trainset,epochs=self.params["n_epoch"],save=False,device=self.device, val=False,pretrained=True,
         batch=self.params["b_size"],verbose=False,plots=False,cache=self.params["cache_all"],workers=self.params["n_workers"])
         metrics =  self.model.val(batch=self.params["test_b_size"],device=self.device)
-        self.metrics_update(metrics.results_dict,round_i)
+        self.metrics_update(metrics.results_dict,0)
 
     def save_infos(self,save_loc,sim_type):
 
