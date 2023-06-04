@@ -15,8 +15,8 @@ X_train, X_test, y_train, y_test = load_datasets(save_dir,"DeepDrive-Detection",
 train_embs = np.load(clip_emb_loc+"/train_embs.npy",allow_pickle=True).item()
 
 data = {}
-data["train"] = (X_train[:10],0)
-data["val"] = (X_train[:10],0)
+data["train"] = (X_train,0)
+data["val"] = (X_train,0)
 data["nc"] = 10
 data["names"] = {0: "motorcycle",1: "rider",2: "car",3: "bicycle",4: "bus",
                     5: "pedestrian",6: "traffic sign",7: "truck",8: "traffic light",9: "train"}
@@ -27,14 +27,13 @@ gpu_no = 0
 
 device = torch.device("cuda:"+str(gpu_no) if (torch.cuda.is_available()) else "cpu")
 
-batch_size = 64
+batch_size = -1
 
 model = copy.deepcopy(model)
 
-model.train(data=data,epochs=200,save=False,device= device, val=False,pretrained=True,
+model.train(data=data,epochs=2000,save=False,device= device, val=False,pretrained=True,
 batch=batch_size,verbose=False,plots=False)
 metrics = model.val()
-print(2)
 
 ['metrics/precision(B)', 'metrics/recall(B)', 'metrics/mAP50(B)', 'metrics/mAP50-95(B)', 'fitness']
-metrics.results_dic.keys()
+print(metrics.results_dict)

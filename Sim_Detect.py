@@ -31,7 +31,6 @@ def run_sim(opt,device):
     else:
         n_features = 1000
 
-
     n_class = 10
 
     params = dict()
@@ -64,6 +63,7 @@ def run_sim(opt,device):
     params["n_features"] = n_features
     params["accuracy_type"] = opt.normalized_accuracy
     params["center_selection"] = opt.center_selection
+    params["n_workers"] = opt.n_workers
 
     base_classes =  [i for i in range(params["n_class"])]
     pbar = tqdm(total=opt.n_sim*opt.n_trial)
@@ -131,7 +131,21 @@ def run_sim(opt,device):
             plot_values([Distributed_Model.map50,Oracle_Model.map50,Interactive_Model.map50],["Distributed","Oracle","Interactive"],trial_loc+"/mAP50.jpg","mAP50")
             plot_values([Distributed_Model.map50_95,Oracle_Model.map50_95,Interactive_Model.map50_95],["Distributed","Oracle","Interactive"],trial_loc+"/mAP50-95.jpg","mAP50-95")
             plot_values([Distributed_Model.fitness,Oracle_Model.fitness,Interactive_Model.fitness],["Distributed","Oracle","Interactive"],trial_loc+"/Fitness.jpg","Fitness")
-    
+            
+            precision = [Distributed_Model.precision[:,0],Distributed_Model.precision[:,1],Oracle_Model.precision[:,1],Interactive_Model.precision[:,1]]
+            recall = [Distributed_Model.recall[:,0],Distributed_Model.recall[:,1],Oracle_Model.recall[:,1],Interactive_Model.recall[:,1]]
+            map50 = [Distributed_Model.map50[:,0],Distributed_Model.map50[:,1],Oracle_Model.map50[:,1],Interactive_Model.map50[:,1]]
+            map50_95 = [Distributed_Model.map50_95[:,0],Distributed_Model.map50_95[:,1],Oracle_Model.map50_95[:,1],Interactive_Model.map50_95[:,1]]
+            fitness = [Distributed_Model.fitness[:,0],Distributed_Model.fitness[:,1],Oracle_Model.fitness[:,1],Interactive_Model.fitness[:,1]]
+
+            names = ["Initial","Distributed","Oracle","Interactive"]
+
+            plot_boxplot_values(precision,names,trial_loc+"/Precision_box.jpg","Precision")
+            plot_boxplot_values(recall,names,trial_loc+"/Recall_box.jpg","Recall")
+            plot_boxplot_values(map50,names,trial_loc+"/mAP50_box.jpg","mAP50")
+            plot_boxplot_values(map50_95,names,trial_loc+"/mAP50-95_box.jpg","mAP50-95")
+            plot_boxplot_values(fitness,names,trial_loc+"/Fitness_box.jpg","Fitness")
+
             pbar.update(1)
 
         pbar.set_description("Combining results")
@@ -177,6 +191,7 @@ if __name__ == "__main__":
     parser.add_argument("--train-only-final",type=int, default=1)
     parser.add_argument("--normalized-accuracy",type=int, default=0)
     parser.add_argument("--center-selection",type=str, default="facility")
+    parser.add_argument("--n-workers", type=int, default=1)
 
     opt = parser.parse_args()
 

@@ -524,11 +524,11 @@ class Sim:
 class Sim_Detect(Sim):
     def __init__(self,params,sim_type,device,model,init_results):
         super().__init__(params,sim_type,device,model)
-        self.precision = np.zeros((self.n_sim,self.n_rounds+1))
-        self.recall = np.zeros((self.n_sim,self.n_rounds+1))
-        self.map50 = np.zeros((self.n_sim,self.n_rounds+1))
-        self.map50_95 = np.zeros((self.n_sim,self.n_rounds+1))
-        self.fitness = np.zeros((self.n_sim,self.n_rounds+1))
+        self.precision = np.zeros((self.n_sim,2))
+        self.recall = np.zeros((self.n_sim,2))
+        self.map50 = np.zeros((self.n_sim,2))
+        self.map50_95 = np.zeros((self.n_sim,2))
+        self.fitness = np.zeros((self.n_sim,2))
         self.init_results = init_results
     
     def metrics_update(self,metrics,round_i):
@@ -570,7 +570,6 @@ class Sim_Detect(Sim):
                 cached_inds = self.cache_inds(all_indices,obs_ind[round_i],scores)
             
             else:
-
                 # Obtains unique indices for all devices
                 all_indices = list()
                 for i in range(self.n_device):
@@ -600,11 +599,11 @@ class Sim_Detect(Sim):
 
             self.dataset_ind[sim_seed].append(self.dataset_ind[sim_seed][-1] + cached_inds)
 
-            trainset = create_detection_dataset(X_train[tuple([list(set(self.dataset_ind[self.sim_seed][-1]))])],testset)
-            train_model(self.model,trainset,converge=self.params["converge"],only_final=self.params["train_only_final"],detection=True,params=self.params,device=self.device)
-
-            metrics =  test_model(self.model,testset,self.params["test_b_size"],detection=True)
-            self.metrics_update(metrics,round_i)
+        trainset = create_detection_dataset(X_train[tuple([list(set(self.dataset_ind[self.sim_seed][-1]))])],testset)
+        self.model.train(data=trainset,epochs=self.params["n_epoch"],save=False,device=self.device, val=False,pretrained=True,
+        batch=self.params["b_size"],verbose=False,plots=False,cache=self.params["cache_all"],workers=self.params["n_workers"])
+        metrics =  self.model.val(batch=self.params["test_b_size"],device=self.device)
+        self.metrics_update(metrics.results_dict,round_i)
 
     def save_infos(self,save_loc,sim_type):
 

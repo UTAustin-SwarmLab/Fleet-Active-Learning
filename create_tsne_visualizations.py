@@ -20,13 +20,20 @@ def plot_tsne(train_embs,method_embs,save_loc):
     # plot the distribution of the data points with gray color
 
     sns.color_palette("tab10")
-    
+
+    data = np.concatenate((train_embs,method_embs[0],method_embs[1],method_embs[2]),axis=0)
+    data = pd.DataFrame(data,columns=["x","y"])
+    data["Cluster"] = ["Training Data"]*len(train_embs)+["Distributed"]*len(method_embs[0])+["Centralized"]*len(method_embs[1])+["Interactive"]*len(method_embs[2])
+
+    sns.scatterplot(x="x",y="y",data=data,hue="Cluster",palette=["gray","tab:blue","tab:orange","tab:green"],alpha=0.5,legend=False,ax=ax)
+    """
     plt.scatter(train_embs[:,0],train_embs[:,1],color="gray",label="Training Data",alpha=0.2)
 
-    plt.scatter(method_embs[0][:,0],method_embs[0][:,1],marker="x",label="Distributed",linewidths=2,alpha=0.7,color="tab:blue",s=150)
+    plt.scatter(method_embs[0][:,0],method_embs[0][:,1],marker="x",label="Distributed",linewidths=2,alpha=0.5,color="tab:blue",s=150)
     plt.scatter(method_embs[1][:,0],method_embs[1][:,1],marker="+",label="Centralized",alpha=0.7,linewidths=2,color="tab:orange",s=150)
     plt.scatter(method_embs[2][:,0],method_embs[2][:,1],marker="o",facecolors='none',alpha=0.7,label="Interactive",linewidths=2,color="tab:green",s=150)
-    
+    """
+
     plt.rcParams["font.size"]=15
     plt.rcParams["axes.linewidth"]=2
     plt.rcParams["legend.labelspacing"] = 0.4
@@ -55,7 +62,7 @@ dataset_loc = "/store/datasets/CIFAR10"
 dataset_type = "CIFAR10"
 img_loc = "/store/datasets/CIFAR10"
 clip_emb_loc = "/store/datasets/CIFAR10"
-run_loc = "./runs/CIFAR10/run7"
+run_loc = "./runs/CIFAR10/run10"
 
 values_saved = False
 
@@ -103,7 +110,7 @@ sim_keys = list(dataset_inds[0].keys())
 
 all_inds = [i for i in range(len(X_train))]
 all_embs = clip_obtain_embeddings(X_train,all_inds,train_embs,dataset_type)
-all_emb = TSNE(n_components=2).fit_transform(all_embs)
+all_emb = TSNE(n_components=2,n_jobs=-1).fit_transform(all_embs)
 dataset_embs = []
 
 for i in range(len(sim_types)):

@@ -176,14 +176,24 @@ def combine_det_sims(run_ids,run_loc,target_run_loc,sim_types,name="run"):
 
     Ms = [[] for j in range(len(metrics))]
     for j in range(len(metrics)):
-        for sim_type in sim_types:
-            Ms[j].append(Metrics[sim_type][j])
+        Ms[j].append(Metrics[sim_types[0]][j][:,0])
 
-    plot_values(Ms[0],sim_types,target_run_loc+"/Precision.jpg","Precision")
-    plot_values(Ms[1],sim_types,target_run_loc+"/Recall.jpg","Recall")
-    plot_values(Ms[2],sim_types,target_run_loc+"/mAP50.jpg","mAP50")
-    plot_values(Ms[3],sim_types,target_run_loc+"/mAP50-95.jpg","mAP50-95")
-    plot_values(Ms[4],sim_types,target_run_loc+"/Fitness.jpg","Fitness")
+    for j in range(len(metrics)):
+        for sim_type in sim_types:
+            Ms[j].append(Metrics[sim_type][j][:,1])
+
+    sim_types.insert(0,"Initial")
+
+    for i in range(len(metrics)):
+        for sim_type in sim_types:
+            print(sim_type+" "+metrics[i]+" mean: "+str(np.mean(Ms[i][sim_types.index(sim_type)])))
+            print(sim_type+" "+metrics[i]+" std: "+str(np.std(Ms[i][sim_types.index(sim_type)])))
+    
+    plot_boxplot_values(Ms[0],sim_types,target_run_loc+"/Precision_box.jpg","Precision")
+    plot_boxplot_values(Ms[1],sim_types,target_run_loc+"/Recall_box.jpg","Recall")
+    plot_boxplot_values(Ms[2],sim_types,target_run_loc+"/mAP50_box.jpg","mAP50")
+    plot_boxplot_values(Ms[3],sim_types,target_run_loc+"/mAP50-95_box.jpg","mAP50-95")
+    plot_boxplot_values(Ms[4],sim_types,target_run_loc+"/Fitness_box.jpg","Fitness")
 
 # Creates new directories for simulations
 def create_run_dir(run_loc,name="run"):

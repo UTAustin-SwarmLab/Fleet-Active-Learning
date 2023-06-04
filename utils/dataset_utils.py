@@ -206,7 +206,7 @@ def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.125,img_loc
             return X_train, X_test, y_train, y_test, classes
         else:
             return np.array(X_train), np.array(X_test), y_train, y_test
-    elif type == "DeepDrive" or type == "DeepDrive-Detection":
+    elif type == "DeepDrive":
         
         with open(save_dir+"/det_train.json","r") as file:
             train_labels = json.load(file)
@@ -289,6 +289,36 @@ def load_datasets(save_dir:str,type:str,cache_all=False,test_ratio=0.125,img_loc
             return X_train, X_test, y_train, y_test, classes
         else:
             return np.array(X_train), np.array(X_test), y_train, y_test 
+    elif type == "DeepDrive-Detection":
+        
+        with open(save_dir+"/det_train.json","r") as file:
+            train_labels = json.load(file)
+        
+        with open(save_dir+"/det_val.json","r") as file:
+            val_labels = json.load(file)
+
+        label_map = {
+        "rainy":0,
+        "snowy":1,
+        "clear": 2,
+        "overcast":3,
+        "partly cloudy": 4,
+        "foggy": 5,
+        "undefined":6
+        }
+
+        w_val_labels = list(map(lambda x:x["attributes"]["weather"],val_labels))
+        w_train_labels = list(map(lambda x:x["attributes"]["weather"],train_labels)) 
+
+        train_locs = list(map(lambda x:img_loc+"/train/"+x["name"],train_labels))
+        test_locs = list(map(lambda x:img_loc+"/val/"+x["name"],val_labels))
+        y_train = torch.tensor(list(map(lambda x:label_map[x],w_train_labels)),dtype=int)
+        y_test = torch.tensor(list(map(lambda x:label_map[x],w_val_labels)),dtype=int)
+        
+        X_train = train_locs
+        X_test = test_locs
+
+        return np.array(X_train), np.array(X_test), y_train, y_test 
     else:
         print("Dataset not found")
         exit()

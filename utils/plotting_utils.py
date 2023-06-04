@@ -149,37 +149,54 @@ def plot_values(values: list,names: list,save_loc:str,y_label:str,linestyles=["-
     plt.legend([],[], frameon=False)
     plt.savefig(save_loc)
 
-# Creates L2-Norm Plots for the simulations
-def plot_values(values: list,names: list,save_loc:str,y_label:str) -> None:
+# Creates Accuracy plots for the simulations
+def plot_boxplot_values(values,names,save_loc,y_label,plt_int=False):
 
-    """
-    :param accs: Accuracy values
-    :param names: Names of the algorithms
-    :param save_loc: Location to save the plot
-    :return: None
-    """
+    vals = np.concatenate(values)
+    df = pd.DataFrame(vals,columns=[y_label])
 
+    n_sim = len(values[0])
+
+    df_names = []
+    for name in names:
+        df_names.extend([name]*n_sim)
+    df["Policy"] = df_names
+
+    sns.set_theme(style="darkgrid")
     plt.close("all")
     fig, ax = plt.subplots(figsize=(7,7),dpi=600)
+    gg = sns.boxplot(data=df,x="Policy",y=y_label,order=names)
+    
+    boxes = ax.findobj(matplotlib.patches.PathPatch)
 
-    for i in range(len(values)):
-        data = pd.DataFrame(values[i].reshape(-1,1),columns=[y_label])
-        data["Round"] = [i for i in range(values[i].shape[1])]* values[i].shape[0]
-        sns.lineplot(data=data,x="Round",y=y_label,label=names[i],linewidth=3)
+    colors = [  "gray","tab:blue","tab:orange","tab:green"]
 
-    plt.grid(linestyle='--', linewidth=2)
-    plt.xlabel("Round $r$",fontweight="bold" ,fontsize=24)
+    for color, box in zip(colors, boxes):
+        box.set_facecolor(color)
+    
+    for i in range(len(names)):
+        boxes[i].set_label(names[i])
+
+    if n_sim >= 2:
+        f = add_stat_annotation(gg, data=df, x="Policy", y=y_label, order=names,
+                    box_pairs=[((names[1]), (names[3]))],
+                     test='Wilcoxon', text_format='full', loc='outside', verbose=0,fontsize=20)
+    else:
+        f = add_stat_annotation(gg, data=df, x="Policy", y=y_label, order=names,
+                    box_pairs=[((names[1]), (names[1]))],
+                     test='Mann-Whitney', text_format='full', loc='outside', verbose=0,fontsize=20)
+
+    ax.set_xlabel(ax.get_xlabel(), fontdict={'weight': 'bold',"size":24})
     plt.ylabel(y_label,fontweight="bold" ,fontsize=24)
-
     plt.rcParams["font.size"]=18
     plt.rcParams["axes.linewidth"]=2
-    ax.xaxis.set_tick_params(labelsize=14)
+    ax.xaxis.set_tick_params(labelsize=14,width=2)
     ax.yaxis.set_tick_params(labelsize=14)
-    plt.legend(prop=dict(size=20,weight='bold'))
+    locs,labels = plt.xticks()
+    plt.xticks(locs,labels,weight="bold")
     plt.tight_layout()
     plt.legend([],[], frameon=False)
     plt.savefig(save_loc)
-
 
 
 
