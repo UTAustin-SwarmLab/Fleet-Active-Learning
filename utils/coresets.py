@@ -191,6 +191,7 @@ class kCenterGreedy:
 class FacilityLocation:
 
     def __init__(self, features,base_features, obs_inds, n_iter, n_cache, metric='euclidean'):
+        
         self.features = features
         self.base_features = base_features
         self.inds = obs_inds
@@ -484,6 +485,19 @@ class FacilityLocation:
         else:
             raise ValueError('Method not supported')
        
+class FacilityLocation_with_M(FacilityLocation):
+    def __init__(self, M,max_M, obs_inds, n_cache):
+
+        self.inds = obs_inds
+        self.M = M
+        self.max_M = max_M
+        self.n_device = len(obs_inds)
+        self.n_obs = len(obs_inds[0])
+        self.n_cache = n_cache
+        
+
+
+
 
         
 

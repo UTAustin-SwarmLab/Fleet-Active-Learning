@@ -32,6 +32,7 @@ import pylab
 import plotly.express as px
 import gmplot
 from copy import deepcopy
+from sklearn.metrics import pairwise_distances
 
 from utils.model_utils import *
 from utils.dataset_utils import *
@@ -392,6 +393,20 @@ class Sim:
         
         return embeddings
 
+    def create_M_max_M(self,M,all_inds,obs_inds,base_inds):
+
+        obs_ind = np.concatenate(obs_inds,axis=0)
+
+        obs_mask = [all_inds.index(i) for i in obs_ind]
+
+        base_mask = [all_inds.index(i) for i in base_inds]
+
+        M_max = np.max(M[obs_mask][:,base_mask],axis=1).reshape(-1,1)
+
+        M = M[np.ix_(obs_mask,obs_mask)]
+
+        return M,M_max
+
     def map_embeddings_devices(self,embeddings,all_inds,obs_inds,base_inds):
 
         embs = np.zeros((self.n_device,len(obs_inds[0]),embeddings.shape[1]))
@@ -481,12 +496,15 @@ class Sim:
                 elif self.unc_type == "clip":
                     embeddings = self.clip_obtain_embeddings(X_train,y_train,all_indices,train_embs)
 
-                embeddings, base_embeddings = self.map_embeddings_devices(embeddings,all_indices,obs_ind[round_i],self.dataset_ind[sim_seed][-1])
-                
+                distances = pairwise_distances(embeddings, metric="euclidean")
+                M = 1/(1+0.01*distances)
+
+                M,M_max = self.create_M_max_M(M,all_indices,obs_ind[round_i],self.dataset_ind[sim_seed][-1])
+ 
                 if self.params["center_selection"]=="kcenter":
                     sampling_policy = kCenterGreedy(embeddings,base_embeddings,obs_ind[round_i],self.n_iter,self.n_cache)
                 elif self.params["center_selection"]=="facility":
-                    sampling_policy = FacilityLocation(embeddings,base_embeddings,obs_ind[round_i],self.n_iter,self.n_cache)
+                    sampling_policy = FacilityLocation_with_M(M,M_max,obs_ind[round_i],self.n_cache)
                 else:
                     raise ValueError("Invalid Center Selection Type")
                 cached_inds = sampling_policy.sample_caches(self.sim_type)
@@ -587,12 +605,15 @@ class Sim_Detect(Sim):
                 elif self.unc_type == "clip":
                     embeddings = self.clip_obtain_embeddings(X_train,y_train,all_indices,train_embs)
 
-                embeddings, base_embeddings = self.map_embeddings_devices(embeddings,all_indices,obs_ind[round_i],self.dataset_ind[sim_seed][-1])
-                
+                distances = pairwise_distances(embeddings, metric="euclidean")
+                M = 1/(1+0.01*distances)
+
+                M,M_max = self.create_M_max_M(M,all_indices,obs_ind[round_i],self.dataset_ind[sim_seed][-1])
+                                
                 if self.params["center_selection"]=="kcenter":
                     sampling_policy = kCenterGreedy(embeddings,base_embeddings,obs_ind[round_i],self.n_iter,self.n_cache)
                 elif self.params["center_selection"]=="facility":
-                    sampling_policy = FacilityLocation(embeddings,base_embeddings,obs_ind[round_i],self.n_iter,self.n_cache)
+                    sampling_policy = FacilityLocation_with_M(M,M_max,obs_ind[round_i],self.n_cache)
                 else:
                     raise ValueError("Invalid Center Selection Type")
                 cached_inds = sampling_policy.sample_caches(self.sim_type)

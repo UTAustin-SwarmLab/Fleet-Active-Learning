@@ -90,9 +90,12 @@ def run_sim(opt,device):
         initial_dataset = create_detection_dataset(X_train[tuple(Unc_Model.dataset_ind[sim_i])],X_test)
 
         pbar.set_description("Training initial model")
-        train_model(Unc_Model.model,initial_dataset,converge=opt.converge_train,only_final=opt.train_only_final,silent=False,params=params,detection=True,device=device)
 
-        results = test_model(Unc_Model.model,X_test,opt.test_b_size,detection=True)
+        Unc_Model.model.train(data=initial_dataset,epochs=Unc_Model.params["n_epoch"],save=False,device=Unc_Model.device, val=False,pretrained=True,
+        batch=Unc_Model.params["b_size"],verbose=False,plots=False,cache=Unc_Model.params["cache_all"],workers=Unc_Model.params["n_workers"])
+
+        metrics = Unc_Model.model.val(batch=Unc_Model.params["test_b_size"],device=Unc_Model.device)
+        results = metrics.results_dict
 
         print("Initial mAP50: ",results["metrics/mAP50(B)"])
 
