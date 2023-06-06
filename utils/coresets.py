@@ -495,21 +495,3 @@ class FacilityLocation_with_M(FacilityLocation):
         self.n_obs = len(obs_inds[0])
         self.n_cache = n_cache
         
-
-
-
-
-        
-
-        
-
-
-
-
-
-
-
-
-        
-
-

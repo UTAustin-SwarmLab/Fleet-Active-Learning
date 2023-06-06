@@ -25,24 +25,25 @@ def plot_tsne(train_embs,method_embs,save_loc):
     data = pd.DataFrame(data,columns=["x","y"])
     data["Cluster"] = ["Training Data"]*len(train_embs)+["Distributed"]*len(method_embs[0])+["Centralized"]*len(method_embs[1])+["Interactive"]*len(method_embs[2])
 
-    sns.scatterplot(x="x",y="y",data=data,hue="Cluster",palette=["gray","tab:blue","tab:orange","tab:green"],alpha=0.5,legend=False,ax=ax)
-    """
-    plt.scatter(train_embs[:,0],train_embs[:,1],color="gray",label="Training Data",alpha=0.2)
+    #sns.scatterplot(x="x",y="y",data=data,hue="Cluster",palette=["gray","tab:blue","tab:orange","tab:green"],alpha=0.5,legend=False,ax=ax)
+    
+    plt.scatter(train_embs[:,0],train_embs[:,1],color="tab:gray",label="Training Data",alpha=0.1)
 
-    plt.scatter(method_embs[0][:,0],method_embs[0][:,1],marker="x",label="Distributed",linewidths=2,alpha=0.5,color="tab:blue",s=150)
-    plt.scatter(method_embs[1][:,0],method_embs[1][:,1],marker="+",label="Centralized",alpha=0.7,linewidths=2,color="tab:orange",s=150)
-    plt.scatter(method_embs[2][:,0],method_embs[2][:,1],marker="o",facecolors='none',alpha=0.7,label="Interactive",linewidths=2,color="tab:green",s=150)
-    """
+    plt.scatter(method_embs[0][:,0],method_embs[0][:,1],marker="x",label="Distributed",linewidths=3,alpha=1,color="tab:blue",s=200)
+    plt.scatter(method_embs[1][:,0],method_embs[1][:,1],marker="+",label="Centralized",alpha=1,linewidths=3,color="tab:orange",s=200)
+    plt.scatter(method_embs[2][:,0],method_embs[2][:,1],marker="o",facecolors='none',alpha=1,label="Interactive",linewidths=3,color="tab:green",s=200)
+    
 
     plt.rcParams["font.size"]=15
     plt.rcParams["axes.linewidth"]=2
     plt.rcParams["legend.labelspacing"] = 0.4
 
-    handles = [plt.scatter([],[],marker="o",color="gray",label="Training Data",s=150), 
-           plt.scatter([],[],marker="x",color="tab:blue",label="Distributed",s=200), 
-           plt.scatter([],[],marker="+",color="tab:orange",label="Centralized",s=200),
-           plt.scatter([],[],marker="o",facecolors='none',color="tab:green",s=200,label="Interactive")]
-    legend = plt.legend(handles=handles,frameon=True,loc='upper left',bbox_to_anchor=(-0.1, 1.1))
+    handles = [plt.scatter([],[],marker="o",color="tab:gray",label="Training Data",s=150), 
+           plt.scatter([],[],marker="x",color="tab:blue",label="Distributed",s=200,linewidths=3), 
+           plt.scatter([],[],marker="+",color="tab:orange",label="Centralized",s=200,linewidths=3),
+           plt.scatter([],[],marker="o",facecolors='none',color="tab:green",s=200,label="Interactive",linewidths=3)]
+    #legend = plt.legend(handles=handles,frameon=True,loc='lower left',bbox_to_anchor=(-0.1, 1.1))
+    legend = plt.legend(handles=handles,frameon=True)
 
     for text in legend.get_texts():
         text.set_weight('bold')
@@ -86,7 +87,7 @@ def clip_obtain_embeddings(X_train,inds,train_embs,dataset_type):
 
 sim_types = ["Distributed","Oracle","Interactive"]
 
-X_train,X_test,y_train,y_test = load_datasets(dataset_loc,dataset_type,img_loc=img_loc)
+#X_train,X_test,y_train,y_test = load_datasets(dataset_loc,dataset_type,img_loc=img_loc)
 
 if dataset_type == "AdversarialWeather":
     embs = np.load(clip_emb_loc+"/clip_embs.npy",allow_pickle=True).item()
@@ -109,16 +110,24 @@ for sim_type in sim_types:
 sim_keys = list(dataset_inds[0].keys())
 
 all_inds = [i for i in range(len(X_train))]
-all_embs = clip_obtain_embeddings(X_train,all_inds,train_embs,dataset_type)
-all_emb = TSNE(n_components=2,n_jobs=-1).fit_transform(all_embs)
-dataset_embs = []
+if os.path.exists(run_loc+"/embs_tsne.npy"):
+    all_tsne = np.load(run_loc+"/embs_tsne.npy")
+else:
+    all_embs = clip_obtain_embeddings(X_train,all_inds,train_embs,dataset_type)
+    all_tsne = TSNE(n_components=2,n_jobs=-1,init="pca",learning_rate="auto",verbose=1).fit_transform(all_embs)
+    # Save the TSNE Embeddings
+
+    np.save(run_loc+"/embs_tsne.npy",all_tsne)
+
+
+dataset_tsnes = []
 
 for i in range(len(sim_types)):
     dataset_ind = dataset_inds[i][sim_keys[0]][-1].copy()
-    dataset_emb = all_embs[dataset_ind]
-    dataset_embs.append(dataset_emb)
+    dataset_tsne = all_tsne[dataset_ind]
+    dataset_tsnes.append(dataset_tsne)
 
-plot_tsne(all_embs,dataset_embs,run_loc+"/tsne.jpg")
+plot_tsne(all_tsne,dataset_tsnes,run_loc+"/tsne.jpg")
 
 """
 n_centers = 3

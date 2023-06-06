@@ -33,7 +33,7 @@ model = copy.deepcopy(model)
 
 model.train(data=data,epochs=100,save=False,device= device, val=False,pretrained=True,
 batch=batch_size,verbose=False,plots=False,cache=True)
-metrics = model.val(batch=batch_size)
+metrics = model.val()
 
 print(metrics.results_dict)
 print(metrics)

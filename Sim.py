@@ -140,10 +140,10 @@ def run_sim(opt,device):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset-loc", type=str,default="/store/datasets/CIFAR10")
-    parser.add_argument("--img-loc", type=str,default="/store/datasets/CIFAR10")
-    parser.add_argument("--clip-emb-loc", type=str, default= "/store/datasets/CIFAR10")
-    parser.add_argument("--emb-loc", type=str, default= "/store/datasets/CIFAR10/features/resnet50")
+    parser.add_argument("--dataset-loc", type=str,default="/store/datasets/AdversarialWeather")
+    parser.add_argument("--img-loc", type=str,default="/store/datasets/AdversarialWeather")
+    parser.add_argument("--clip-emb-loc", type=str, default= "/store/datasets/AdversarialWeather")
+    parser.add_argument("--emb-loc", type=str, default= "/store/datasets/AdversarialWeather/features/resnet50")
     parser.add_argument("--gpu-no", type=int,default=4)
     parser.add_argument("--n-unique-device", type=int, default=5)
     parser.add_argument("--n-same-device", type=int, default=5)
@@ -163,7 +163,7 @@ if __name__ == "__main__":
     parser.add_argument("--n-trial",type=int, default=5)
     parser.add_argument("--init-trial",type=int, default=0)
     parser.add_argument("--unc-type",type=str, default="clip")
-    parser.add_argument("--dataset-type",type=str, default="CIFAR10")
+    parser.add_argument("--dataset-type",type=str, default="AdversarialWeather")
     parser.add_argument("--use-embeddings",type=int, default=1)
     parser.add_argument("--converge-train",type=int, default=1)
     parser.add_argument("--cache-all",type=int, default=0)
