@@ -33,7 +33,7 @@ import plotly.express as px
 import gmplot
 
 # Creates L2-Norm Plots for the simulations
-def plot_accs(accs: list,names: list,save_loc:str,linestyles=["--","-","-."]) -> None:
+def plot_accs(accs: list,names: list,save_loc:str,linestyles=["--","-","-.","-","--","-."]) -> None:
 
     """
     :param accs: Accuracy values

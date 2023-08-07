@@ -45,6 +45,11 @@ n_device = len(centers)
 n_device_show = len(centers)
 rotation_angles = [np.pi/6,np.pi/2,-np.pi/6]
 
+seed = 12
+
+np.random.seed(seed)
+
+
 X = np.zeros((0,2))
 y = np.zeros((0))
 for j in range(n_repeat):
