@@ -76,6 +76,8 @@ interactive_policy = FacilityLocation(embeddings,base_embeddings,obs_inds,n_iter
 centr_inds = interactive_policy.sample_caches("Interactive-Lazy")
 
 
+
+
 X_dist = np.concatenate((X[dist_inds],base_embeddings),axis=0)
 X_centr = np.concatenate((X[centr_inds],base_embeddings),axis=0)
 

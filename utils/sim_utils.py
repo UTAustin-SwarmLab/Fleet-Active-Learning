@@ -654,3 +654,120 @@ class Sim_Detect(Sim):
         
         with open(save_loc+'/'+sim_type+'_fitness.npy', 'wb') as outfile:
             np.save(outfile, self.fitness)
+
+class Sim_FL(Sim):
+    
+    def __init__(self,params,sim_type,device,model):
+        super().__init__(params,sim_type,device,model)
+    
+    def FL_train(self,local_inds,X_train,y_train):
+        
+        local_models = []
+        
+        for local_ind in local_inds:
+
+            trainset = self.create_traindataset(X_train[tuple([local_ind])],y_train[tuple([local_ind])])
+            local_model = deepcopy(self.model)
+            train_model(local_model,trainset,converge=False,only_final=self.params["train_only_final"])
+            local_models.append(deepcopy(local_model))
+
+        mean_state_dict = {}
+
+        for name, param in self.model.state_dict().items():
+            vs = []
+            for local_model in local_models:
+                vs.append(local_model.state_dict()[name])
+            
+            vs = torch.stack(vs,dim=0)
+
+            try:
+                mean_value = vs.mean(dim=0)
+            except Exception:
+                # for BN's cnt
+                mean_value = (1.0 * vs).mean(dim=0).long()
+            mean_state_dict[name] = mean_value
+        
+        self.model.load_state_dict(mean_state_dict,strict=False)
+
+    
+    
+    def sim_round(self,sim_i,sim_seed,X_train,y_train,testset,base_inds,obs_ind,train_embs):
+
+        self.sim_i = sim_i
+        self.sim_seed = sim_seed
+        self.obs_ind[sim_seed] = obs_ind
+
+        random.seed(sim_seed)
+        np.random.seed(sim_seed)
+        self.seeds.append(sim_seed)
+
+        self.set_base_inds(base_inds[0],sim_seed)
+
+        self.model.n_epoch = self.params["FL_epoch"]
+
+        self.accs[sim_i,0] = test_model(self.model,testset)
+        
+        for round_i in range(self.n_rounds):
+
+            if self.params["FL_type"] == "All":
+
+                local_inds = []
+                for i in range(self.n_device):
+                    local_inds.append(obs_ind[round_i][i])
+
+            elif self.params["FL_type"] == "Selected":
+
+                if self.unc_type in ["Entropy","LeastConfidence","MarginSampling","Random"]:
+
+                    all_indices = list()
+                    for i in range(self.n_device):
+                        all_indices.extend(obs_ind[round_i][i])
+                    
+                    all_indices = list(set(all_indices))
+
+                    logits = self.obtain_logits(X_train,y_train,all_indices)
+
+                    scores = self.unc_scores(logits)
+
+                    cached_inds = self.cache_inds(all_indices,obs_ind[round_i],scores)
+                
+                else:
+
+                    # Obtains unique indices for all devices
+                    all_indices = list()
+                    for i in range(self.n_device):
+                        all_indices.extend(obs_ind[round_i][i])
+                    all_indices.extend(self.dataset_ind[sim_seed][-1])
+                    
+                    all_indices = list(set(all_indices))
+
+                    # Obtains embeddings for these unique indices
+
+                    if self.unc_type == "coreset":
+                        embeddings = self.coreset_obtain_embeddings(X_train,y_train,all_indices)
+                    elif self.unc_type == "badge":
+                        embeddings = self.badge_obtain_embeddings(X_train,y_train,all_indices)
+                    elif self.unc_type == "clip":
+                        embeddings = self.clip_obtain_embeddings(X_train,y_train,all_indices,train_embs)
+
+                    distances = pairwise_distances(embeddings, metric="euclidean")
+                    M = 1/(1+0.01*distances)
+
+                    M,M_max = self.create_M_max_M(M,all_indices,obs_ind[round_i],self.dataset_ind[sim_seed][-1])
+    
+                    if self.params["center_selection"]=="kcenter":
+                        sampling_policy = kCenterGreedy(embeddings,base_embeddings,obs_ind[round_i],self.n_iter,self.n_cache)
+                    elif self.params["center_selection"]=="facility":
+                        sampling_policy = FacilityLocation_with_M(M,M_max,obs_ind[round_i],self.n_cache)
+                    else:
+                        raise ValueError("Invalid Center Selection Type")
+                    cached_inds = sampling_policy.sample_caches(self.sim_type)
+                
+                for i in range(self.n_device):
+
+                    local_inds = [cached_inds[i*self.n_cache:(i+1)*self.n_cache] for i in range(self.n_device)]
+
+
+            self.FL_train(local_inds,X_train,y_train)
+            self.accs[sim_i,round_i+1] = test_model(self.model,testset,self.test_b_size,self.params["accuracy_type"])
+

@@ -33,7 +33,7 @@ import plotly.express as px
 import gmplot
 
 # Creates L2-Norm Plots for the simulations
-def plot_accs(accs: list,names: list,save_loc:str,linestyles=["--","-","-.","-","--","-."]) -> None:
+def plot_accs(accs: list,names: list,save_loc:str,linestyles=["--","-","-.","-","--","-."],legend:bool=False) -> None:
 
     """
     :param accs: Accuracy values
@@ -60,7 +60,8 @@ def plot_accs(accs: list,names: list,save_loc:str,linestyles=["--","-","-.","-",
     ax.yaxis.set_tick_params(labelsize=14)
     plt.legend(prop=dict(size=20,weight='bold'))
     plt.tight_layout()
-    plt.legend([],[], frameon=False)
+    if not legend:
+        plt.legend([],[], frameon=False)
     plt.savefig(save_loc)
 
 def plot_accs_wrt_n_samples(accs: list,names: list,n_samples: list,save_loc:str) -> None:
