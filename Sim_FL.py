@@ -65,6 +65,9 @@ def run_sim(opt,device):
     params["accuracy_type"] = opt.normalized_accuracy
     params["center_selection"] = opt.center_selection
     params["FL_epoch"] = opt.FL_epoch
+    params["FL_type"] = "Selected"
+
+    FL_percentages = [100,50,20,10,5,2,1]
     
 
     base_classes =  [i for i in range(params["n_class"])]
@@ -111,27 +114,37 @@ def run_sim(opt,device):
 
             trial_loc = create_run_dir(run_i_loc,"trial")
 
-            params["FL_type"] = "All"
-            FL_All = Sim_FL(params,"Distributed-Lazy",device,copy.deepcopy(Unc_Model.model))
+            FL_Sims = []
+            for percent in FL_percentages:
+                params["n_cache"] = int(opt.n_obs*percent/100)
+                FL_Sims.append(Sim_FL(params,"Distributed-Lazy",device,copy.deepcopy(Unc_Model.model)))
 
-            x_dist, N_x = FL_All.create_xdist(trial_i*simcoef_int+simsum_int,obs_classes,y_train)
-                
-            obs_inds = FL_All.create_obs_ind(N_x,y_train,trial_i*simcoef_int+simsum_int)
 
-            pbar.set_description("Running Distributed")
-            FL_All.sim_round(0,trial_i*simcoef_int+simsum_int,X_train,y_train,test_data,base_inds,obs_inds,train_embs)
+            x_dist, N_x = FL_Sims[0].create_xdist(trial_i*simcoef_int+simsum_int,obs_classes,y_train)
+            
+            obs_inds = FL_Sims[0].create_obs_ind(N_x,y_train,trial_i*simcoef_int+simsum_int)
 
+            
+            for k in range(len(FL_percentages)): 
+                pbar.set_description("Running FL for %d%%" % FL_percentages[k])
+                FL_Sims[k].sim_round(0,trial_i*simcoef_int+simsum_int,X_train,y_train,test_data,base_inds,obs_inds,train_embs)
+
+            
             pbar.set_description("Saving results")
-            FL_All.save_infos(trial_loc,"Vanilla_FL")
-
-            plot_accs([FL_All.accs],["Vanilla FL"],trial_loc+"/Accs.jpg",legend=True)
+            for k in range(len(FL_percentages)): 
+                FL_Sims[k].save_infos(trial_loc,"FL_w_%%%d"%FL_percentages[k])
+            
+            accs = [sim.accs for sim in FL_Sims]
+            labels = ["FL_w_%%%d"%percent for percent in FL_percentages]
+            
+            plot_accs(accs,labels,trial_loc+"/Accs.jpg",legend=True)
 
             pbar.update(1)
 
         pbar.set_description("Combining results")
         run_ids = [i for i in range(opt.n_trial)]
 
-        combine_sims(run_ids,run_i_loc,run_i_loc,["Vanilla_FL"],name="trial")
+        combine_sims(run_ids,run_i_loc,run_i_loc,labels,name="trial")
 
 if __name__ == "__main__":
 
@@ -154,11 +167,11 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=0.001)
     parser.add_argument("--n-size", type=int, default=20)
     parser.add_argument("--n-obs", type=int, default=1000)
-    parser.add_argument("--n-cache", type=int, default=1)
+    parser.add_argument("--n-cache", type=int, default=2)
     parser.add_argument("--run-loc", type=str, default="./runs/AdversarialWeather")
-    parser.add_argument("--n-trial",type=int, default=5)
+    parser.add_argument("--n-trial",type=int, default=2)
     parser.add_argument("--init-trial",type=int, default=0)
-    parser.add_argument("--unc-type",type=str, default="badge")
+    parser.add_argument("--unc-type",type=str, default="Random")
     parser.add_argument("--dataset-type",type=str, default="AdversarialWeather")
     parser.add_argument("--use-embeddings",type=int, default=1)
     parser.add_argument("--converge-train",type=int, default=1)
@@ -171,7 +184,8 @@ if __name__ == "__main__":
     parser.add_argument("--train-only-final",type=int, default=0)
     parser.add_argument("--normalized-accuracy",type=int, default=0)
     parser.add_argument("--center-selection",type=str, default="facility")
-    parser.add_argument("--FL-epoch",type=int, default=1)
+    parser.add_argument("--FL-epoch",type=int, default=20)
+    
 
     opt = parser.parse_args()
 
