@@ -30,8 +30,9 @@ In multi-robot systems, robots often gather data to improve the performance of t
 
 ## Experimental Results
 
-![Experimental Results](./assets/fal_results.jpg)
-Each column represents a different dataset. *Row 1* shows the submodular objective of the cloud dataset across the rounds. Both the **_Centralized_** and **_Interactive_** policies achieve similar objectives, while the **_Distributed_** fails to reach the same level of performance. *Row 2* presents the accuracy of the retrained neural networks using the dataset $\mathcal{D}_c^{r}$ in each round $r$. The accuracy plots exhibits a similar trend as the submodular objective, with the **_Interactive_** and **_Centralized_** policies consistently outperforming other benchmark policies.
+![Experimental Results](./assets/fal_results.jpg) 
+
+**Experimental Results:** Each column represents a different dataset. *Row 1* shows the submodular objective of the cloud dataset across the rounds. Both the **_Centralized_** and **_Interactive_** policies achieve similar objectives, while the **_Distributed_** fails to reach the same level of performance. *Row 2* presents the accuracy of the retrained neural networks using the dataset $\mathcal{D}_c^{r}$ in each round $r$. The accuracy plots exhibits a similar trend as the submodular objective, with the **_Interactive_** and **_Centralized_** policies consistently outperforming other benchmark policies.
 
 ## Installation
 ### Packages
