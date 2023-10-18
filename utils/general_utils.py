@@ -127,7 +127,7 @@ def combine_det_sims(
     run_ids=[0, 1],
     run_loc="./runs/DeepDrive-Detection/run9",
     target_run_loc="./runs/DeepDrive-Detection/run9",
-    sim_types=["Distributed", "Interactive", "Interactive"],
+    sim_types=["Distributed", "Centralized", "Interactive"],
     name="trial",
 ):
     with open(
