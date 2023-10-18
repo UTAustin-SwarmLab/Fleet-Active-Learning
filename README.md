@@ -8,7 +8,7 @@ This repository contains the code for the paper [Fleet Active Learning: A Submod
 - [Experimental Results](#experimental-results)
 - [Installation](#installation)
   - [Packages](#packages)
-  - [Dataset](#dataset)
+  - [Datasets](#datasets)
 - [How to run](#how-to-run)
 - [Citation](#citation)
 

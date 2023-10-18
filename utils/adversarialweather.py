@@ -5,14 +5,28 @@ from typing import Type, Any, Callable, Union, List, Optional
 import torchvision.models as vsmodels
 import torch.nn.init as init
 
-def conv3x3(in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1) -> nn.Conv2d:
+
+def conv3x3(
+    in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1
+) -> nn.Conv2d:
     """3x3 convolution with padding"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=dilation, groups=groups, bias=False, dilation=dilation)
+    return nn.Conv2d(
+        in_planes,
+        out_planes,
+        kernel_size=3,
+        stride=stride,
+        padding=dilation,
+        groups=groups,
+        bias=False,
+        dilation=dilation,
+    )
+
 
 def conv1x1(in_planes: int, out_planes: int, stride: int = 1) -> nn.Conv2d:
     """1x1 convolution"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
+
+
 """
 class BasicBlock(nn.Module):
     expansion: int = 1
@@ -226,9 +240,11 @@ class AdversarialWeatherResNet(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         return self._forward_impl(x)
-""" 
+"""
+
+
 class AdversarialWeatherResNet(nn.Module):
-    def __init__(self,output_layer=None,n_class=10) -> None:
+    def __init__(self, output_layer=None, n_class=10) -> None:
         super().__init__()
         self.pretrained = vsmodels.resnet18(pretrained=True)
         self.output_layer = output_layer
@@ -239,57 +255,61 @@ class AdversarialWeatherResNet(nn.Module):
                 self.layer_count += 1
             else:
                 break
-        for i in range(1,len(self.layers)-self.layer_count):
+        for i in range(1, len(self.layers) - self.layer_count):
             self.dummy_var = self.pretrained._modules.pop(self.layers[-i])
-        
+
         self.net = nn.Sequential(self.pretrained._modules)
         self.final_layer = nn.Linear(in_features=512, out_features=n_class)
         self.emb_size = 512
 
-    def forward(self,x):
+    def forward(self, x):
         emb = self.net(x)
         out = self.final_layer(emb)
         return out, emb
 
+
 class FinalLayer(nn.Module):
-    def __init__(self,input_size=512,n_class=10) -> None:
+    def __init__(self, input_size=512, n_class=10) -> None:
         super().__init__()
         self.fc1 = nn.Sequential(
-            nn.Linear(in_features=input_size, out_features=input_size//2),
+            nn.Linear(in_features=input_size, out_features=input_size // 2),
             nn.ReLU(True),
             nn.Dropout(0.3),
-            nn.Linear(in_features=input_size//2, out_features=input_size//4),
+            nn.Linear(in_features=input_size // 2, out_features=input_size // 4),
             nn.ReLU(True),
             nn.Dropout(0.3),
-            nn.Linear(in_features=input_size//4, out_features=input_size//8),
+            nn.Linear(in_features=input_size // 4, out_features=input_size // 8),
             nn.ReLU(True),
             nn.Dropout(0.3),
-            nn.Linear(in_features=input_size//8, out_features=128),
+            nn.Linear(in_features=input_size // 8, out_features=128),
             nn.ReLU(True),
-            nn.Dropout(0.3))
+            nn.Dropout(0.3),
+        )
         self.fc2 = nn.Linear(in_features=128, out_features=n_class)
 
         self.emb_size = 128
         self.n_class = n_class
 
-    def forward(self,x):
+    def forward(self, x):
         emb = self.fc1(x)
         out = self.fc2(emb)
         return out, emb
 
+
 class FinalLayerAdversarial(nn.Module):
-    def __init__(self,input_size=512,n_class=10) -> None:
+    def __init__(self, input_size=512, n_class=10) -> None:
         super().__init__()
         self.fc1 = nn.Sequential(
             nn.Linear(in_features=input_size, out_features=128),
             nn.ReLU(True),
-            nn.Dropout(0.3))
+            nn.Dropout(0.3),
+        )
         self.fc2 = nn.Linear(in_features=128, out_features=n_class)
 
         self.emb_size = 128
         self.n_class = n_class
 
-    def forward(self,x):
+    def forward(self, x):
         emb = self.fc1(x)
         out = self.fc2(emb)
         return out, emb
