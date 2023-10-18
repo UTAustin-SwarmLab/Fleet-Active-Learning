@@ -11,30 +11,50 @@ from utils.model_utils import *
 from utils.sim_utils import *
 from utils.plotting_utils import *
 
-def run_sim(opt,device):
 
-    X_train,X_test,y_train,y_test = load_datasets(opt.dataset_loc,opt.dataset_type,img_loc=opt.img_loc,emb_loc=opt.emb_loc,use_embs=opt.use_embeddings)
+def run_sim(opt, device):
+    X_train, X_test, y_train, y_test = load_datasets(
+        opt.dataset_loc,
+        opt.dataset_type,
+        img_loc=opt.img_loc,
+        emb_loc=opt.emb_loc,
+        use_embs=opt.use_embeddings,
+    )
 
     if opt.unc_type == "clip":
         if opt.dataset_type == "AdversarialWeather":
-            embs = np.load(opt.clip_emb_loc+"/clip_embs.npy",allow_pickle=True).item()
-            train_embs = {"/".join(X_train[i].split("/")[-4:]): embs["/".join(X_train[i].split("/")[-4:])]
-                           for i in  range(len(X_train))}
+            embs = np.load(
+                opt.clip_emb_loc + "/clip_embs.npy", allow_pickle=True
+            ).item()
+            train_embs = {
+                "/".join(X_train[i].split("/")[-4:]): embs[
+                    "/".join(X_train[i].split("/")[-4:])
+                ]
+                for i in range(len(X_train))
+            }
         else:
-            train_embs = np.load(opt.clip_emb_loc+"/train_embs.npy",allow_pickle=True).item()
+            train_embs = np.load(
+                opt.clip_emb_loc + "/train_embs.npy", allow_pickle=True
+            ).item()
     else:
         train_embs = None
-    
+
     n_class = len(np.unique(y_train))
 
-    test_data = create_datasets(X_test,y_test,opt.dataset_type,cache_in_first=opt.cache_in_first,use_embs=opt.use_embeddings)
+    test_data = create_datasets(
+        X_test,
+        y_test,
+        opt.dataset_type,
+        cache_in_first=opt.cache_in_first,
+        use_embs=opt.use_embeddings,
+    )
 
     if opt.use_embeddings:
         n_features = X_train.shape[1]
     else:
         n_features = 1000
     params = dict()
-   
+
     params["n_device"] = opt.n_unique_device * opt.n_same_device
     params["n_unique_device"] = opt.n_unique_device
     params["n_same_device"] = opt.n_same_device
@@ -43,7 +63,7 @@ def run_sim(opt,device):
     params["n_epoch"] = opt.n_epoch
     params["b_size"] = opt.b_size
     params["n_iter"] = opt.n_iter
-    
+
     params["n_class"] = n_class
     params["test_b_size"] = opt.test_b_size
     params["lr"] = opt.lr
@@ -67,100 +87,143 @@ def run_sim(opt,device):
     params["FL_epoch"] = opt.FL_epoch
     params["FL_type"] = "Selected"
 
-    FL_percentages = [100,50,20,10,5,2,1]
-    
+    FL_percentages = [100, 50, 20, 10, 5, 2, 1]
 
-    base_classes =  [i for i in range(params["n_class"])]
-    pbar = tqdm(total=opt.n_sim*opt.n_trial)
+    base_classes = [i for i in range(params["n_class"])]
+    pbar = tqdm(total=opt.n_sim * opt.n_trial)
 
-    for sim_i in range(opt.init_sim, opt.init_sim+opt.n_sim):
-
+    for sim_i in range(opt.init_sim, opt.init_sim + opt.n_sim):
         run_i_loc = create_run_dir(opt.run_loc)
 
         random.seed(sim_i)
         torch.manual_seed(sim_i)
         np.random.seed(sim_i)
 
-        simcoef_int = np.random.randint(low=1,high=100)
-        simsum_int = np.random.randint(low=1,high=100)
+        simcoef_int = np.random.randint(low=1, high=100)
+        simsum_int = np.random.randint(low=1, high=100)
 
-        model = get_model(opt.dataset_type,opt.dataset_type,device,opt.b_size,opt.n_epoch,opt.lr,n_class,
-                          use_embs=opt.use_embeddings,n_features=n_features)
+        model = get_model(
+            opt.dataset_type,
+            opt.dataset_type,
+            device,
+            opt.b_size,
+            opt.n_epoch,
+            opt.lr,
+            n_class,
+            use_embs=opt.use_embeddings,
+            n_features=n_features,
+        )
 
-        Unc_Model = Sim(params,"Base",device,model)
-        
-        Unc_Model.create_base_inds(y_train,base_classes,sim_i,sim_i)
+        Unc_Model = Sim(params, "Base", device, model)
+
+        Unc_Model.create_base_inds(y_train, base_classes, sim_i, sim_i)
 
         base_inds = Unc_Model.dataset_ind[sim_i]
 
-        initial_dataset = Unc_Model.create_traindataset(X_train[tuple(Unc_Model.dataset_ind[sim_i])],y_train[tuple(Unc_Model.dataset_ind[sim_i])])
-        
+        initial_dataset = Unc_Model.create_traindataset(
+            X_train[tuple(Unc_Model.dataset_ind[sim_i])],
+            y_train[tuple(Unc_Model.dataset_ind[sim_i])],
+        )
+
         pbar.set_description("Training initial model")
-        train_model(Unc_Model.model,initial_dataset,converge=opt.converge_train,only_final=opt.train_only_final)
+        train_model(
+            Unc_Model.model,
+            initial_dataset,
+            converge=opt.converge_train,
+            only_final=opt.train_only_final,
+        )
 
-        accs = test_model(Unc_Model.model,test_data,opt.test_b_size,class_normalized=opt.normalized_accuracy)
+        accs = test_model(
+            Unc_Model.model,
+            test_data,
+            opt.test_b_size,
+            class_normalized=opt.normalized_accuracy,
+        )
 
-        print("Test accuracy: ",accs)
+        print("Test accuracy: ", accs)
 
-        save_model(Unc_Model.model,run_i_loc,"init_model"+str(sim_i)+".pt")
+        save_model(Unc_Model.model, run_i_loc, "init_model" + str(sim_i) + ".pt")
 
         obs_classes = [base_classes for i in range(params["n_device"])]
 
-        for trial_i in range(opt.init_trial,opt.init_trial+opt.n_trial):
+        for trial_i in range(opt.init_trial, opt.init_trial + opt.n_trial):
+            random.seed(trial_i * simcoef_int + simsum_int)
+            torch.manual_seed(trial_i * simcoef_int + simsum_int)
+            np.random.seed(trial_i * simcoef_int + simsum_int)
 
-            random.seed(trial_i*simcoef_int+simsum_int)
-            torch.manual_seed(trial_i*simcoef_int+simsum_int)
-            np.random.seed(trial_i*simcoef_int+simsum_int)
-
-            trial_loc = create_run_dir(run_i_loc,"trial")
+            trial_loc = create_run_dir(run_i_loc, "trial")
 
             FL_Sims = []
             for percent in FL_percentages:
-                params["n_cache"] = int(opt.n_obs*percent/100)
-                FL_Sims.append(Sim_FL(params,"Distributed-Lazy",device,copy.deepcopy(Unc_Model.model)))
+                params["n_cache"] = int(opt.n_obs * percent / 100)
+                FL_Sims.append(
+                    Sim_FL(
+                        params, "Distributed", device, copy.deepcopy(Unc_Model.model)
+                    )
+                )
 
+            x_dist, N_x = FL_Sims[0].create_xdist(
+                trial_i * simcoef_int + simsum_int, obs_classes, y_train
+            )
 
-            x_dist, N_x = FL_Sims[0].create_xdist(trial_i*simcoef_int+simsum_int,obs_classes,y_train)
-            
-            obs_inds = FL_Sims[0].create_obs_ind(N_x,y_train,trial_i*simcoef_int+simsum_int)
+            obs_inds = FL_Sims[0].create_obs_ind(
+                N_x, y_train, trial_i * simcoef_int + simsum_int
+            )
 
-            
-            for k in range(len(FL_percentages)): 
+            for k in range(len(FL_percentages)):
                 pbar.set_description("Running FL for %d%%" % FL_percentages[k])
-                FL_Sims[k].sim_round(0,trial_i*simcoef_int+simsum_int,X_train,y_train,test_data,base_inds,obs_inds,train_embs)
+                FL_Sims[k].sim_round(
+                    0,
+                    trial_i * simcoef_int + simsum_int,
+                    X_train,
+                    y_train,
+                    test_data,
+                    base_inds,
+                    obs_inds,
+                    train_embs,
+                )
 
-            
             pbar.set_description("Saving results")
-            for k in range(len(FL_percentages)): 
-                FL_Sims[k].save_infos(trial_loc,"FL_w_%%%d"%FL_percentages[k])
-            
+            for k in range(len(FL_percentages)):
+                FL_Sims[k].save_infos(trial_loc, "FL_w_%%%d" % FL_percentages[k])
+
             accs = [sim.accs for sim in FL_Sims]
-            labels = ["FL_w_%%%d"%percent for percent in FL_percentages]
-            
-            plot_accs(accs,labels,trial_loc+"/Accs.jpg",legend=True)
+            labels = ["FL_w_%%%d" % percent for percent in FL_percentages]
+
+            plot_accs(accs, labels, trial_loc + "/Accs.jpg", legend=True)
 
             pbar.update(1)
 
         pbar.set_description("Combining results")
         run_ids = [i for i in range(opt.n_trial)]
 
-        combine_sims(run_ids,run_i_loc,run_i_loc,labels,name="trial")
+        combine_sims(run_ids, run_i_loc, run_i_loc, labels, name="trial")
+
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset-loc", type=str,default="/store/datasets/AdversarialWeather")
-    parser.add_argument("--img-loc", type=str,default="/store/datasets/AdversarialWeather")
-    parser.add_argument("--clip-emb-loc", type=str, default= "/store/datasets/AdversarialWeather")
-    parser.add_argument("--emb-loc", type=str, default= "/store/datasets/AdversarialWeather/features/resnet50")
-    parser.add_argument("--gpu-no", type=int,default=4)
+    parser.add_argument(
+        "--dataset-loc", type=str, default="/store/datasets/AdversarialWeather"
+    )
+    parser.add_argument(
+        "--img-loc", type=str, default="/store/datasets/AdversarialWeather"
+    )
+    parser.add_argument(
+        "--clip-emb-loc", type=str, default="/store/datasets/AdversarialWeather"
+    )
+    parser.add_argument(
+        "--emb-loc",
+        type=str,
+        default="/store/datasets/AdversarialWeather/features/resnet50",
+    )
+    parser.add_argument("--gpu-no", type=int, default=4)
     parser.add_argument("--n-unique-device", type=int, default=5)
     parser.add_argument("--n-same-device", type=int, default=5)
     parser.add_argument("--n-sim", type=int, default=1)
     parser.add_argument("--n-rounds", type=int, default=5)
     parser.add_argument("--n-epoch", type=int, default=300)
     parser.add_argument("--b-size", type=int, default=10000)
-    parser.add_argument("--init-sim", type=int, default=0) 
+    parser.add_argument("--init-sim", type=int, default=0)
     parser.add_argument("--n_iter", type=int, default=3)
     parser.add_argument("--n-class", type=int, default=10)
     parser.add_argument("--test-b-size", type=int, default=40000)
@@ -169,28 +232,37 @@ if __name__ == "__main__":
     parser.add_argument("--n-obs", type=int, default=1000)
     parser.add_argument("--n-cache", type=int, default=2)
     parser.add_argument("--run-loc", type=str, default="./runs/AdversarialWeather")
-    parser.add_argument("--n-trial",type=int, default=2)
-    parser.add_argument("--init-trial",type=int, default=0)
-    parser.add_argument("--unc-type",type=str, default="Random")
-    parser.add_argument("--dataset-type",type=str, default="AdversarialWeather")
-    parser.add_argument("--use-embeddings",type=int, default=1)
-    parser.add_argument("--converge-train",type=int, default=1)
-    parser.add_argument("--cache-all",type=int, default=0)
-    parser.add_argument("--dirichlet",type=int, default=1)
-    parser.add_argument("--dirichlet-base",type=int, default=1)
-    parser.add_argument("--dirichlet-alpha",type=float, default=1)
-    parser.add_argument("--dirichlet-base-alpha",type=float, default=5)
-    parser.add_argument("--cache-in-first",type=int, default=1)
-    parser.add_argument("--train-only-final",type=int, default=0)
-    parser.add_argument("--normalized-accuracy",type=int, default=0)
-    parser.add_argument("--center-selection",type=str, default="facility")
-    parser.add_argument("--FL-epoch",type=int, default=20)
-    
+    parser.add_argument("--n-trial", type=int, default=2)
+    parser.add_argument("--init-trial", type=int, default=0)
+    parser.add_argument("--unc-type", type=str, default="Random")
+    parser.add_argument("--dataset-type", type=str, default="AdversarialWeather")
+    parser.add_argument("--use-embeddings", type=int, default=1)
+    parser.add_argument("--converge-train", type=int, default=1)
+    parser.add_argument("--cache-all", type=int, default=0)
+    parser.add_argument("--dirichlet", type=int, default=1)
+    parser.add_argument("--dirichlet-base", type=int, default=1)
+    parser.add_argument("--dirichlet-alpha", type=float, default=1)
+    parser.add_argument("--dirichlet-base-alpha", type=float, default=5)
+    parser.add_argument("--cache-in-first", type=int, default=1)
+    parser.add_argument("--train-only-final", type=int, default=0)
+    parser.add_argument("--normalized-accuracy", type=int, default=0)
+    parser.add_argument("--center-selection", type=str, default="facility")
+    parser.add_argument("--FL-epoch", type=int, default=20)
 
     opt = parser.parse_args()
 
-    device = torch.device("cuda:"+str(opt.gpu_no) if (torch.cuda.is_available()) else "cpu")
+    device = torch.device(
+        "cuda:" + str(opt.gpu_no) if (torch.cuda.is_available()) else "cpu"
+    )
 
-    print('Using torch %s %s' % (torch.__version__, torch.cuda.get_device_properties(opt.gpu_no) if torch.cuda.is_available() else 'CPU'))
+    print(
+        "Using torch %s %s"
+        % (
+            torch.__version__,
+            torch.cuda.get_device_properties(opt.gpu_no)
+            if torch.cuda.is_available()
+            else "CPU",
+        )
+    )
 
-    run_sim(opt,device)
+    run_sim(opt, device)
