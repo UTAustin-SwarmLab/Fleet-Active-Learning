@@ -32,9 +32,15 @@ import pylab
 import plotly.express as px
 import gmplot
 
-# Creates L2-Norm Plots for the simulations
-def plot_accs(accs: list,names: list,save_loc:str,linestyles=["--","-","-.","-","--","-."],legend:bool=False) -> None:
 
+# Creates L2-Norm Plots for the simulations
+def plot_accs(
+    accs: list,
+    names: list,
+    save_loc: str,
+    linestyles=["--", "-", "-.", "-", "--", "-."],
+    legend: bool = False,
+) -> None:
     """
     :param accs: Accuracy values
     :param names: Names of the algorithms
@@ -43,28 +49,38 @@ def plot_accs(accs: list,names: list,save_loc:str,linestyles=["--","-","-.","-",
     """
 
     plt.close("all")
-    fig, ax = plt.subplots(figsize=(7,7),dpi=600)
+    fig, ax = plt.subplots(figsize=(7, 7), dpi=600)
 
     for i in range(len(accs)):
-        data = pd.DataFrame(accs[i].reshape(-1,1),columns=["Accuracy"])
-        data["Round"] = [i for i in range(accs[i].shape[1])]* accs[i].shape[0]
-        sns.lineplot(data=data,x="Round",y="Accuracy",label=names[i],linestyle=linestyles[i],linewidth=3)
+        data = pd.DataFrame(accs[i].reshape(-1, 1), columns=["Accuracy"])
+        data["Round"] = [i for i in range(accs[i].shape[1])] * accs[i].shape[0]
+        sns.lineplot(
+            data=data,
+            x="Round",
+            y="Accuracy",
+            label=names[i],
+            linestyle=linestyles[i],
+            linewidth=3,
+        )
 
-    plt.grid(linestyle='--', linewidth=2)
-    plt.xlabel("Round $r$",fontweight="bold" ,fontsize=24)
-    plt.ylabel("Accuracy",fontweight="bold" ,fontsize=24)
+    plt.grid(linestyle="--", linewidth=2)
+    plt.xlabel("Round $r$", fontweight="bold", fontsize=24)
+    plt.ylabel("Accuracy", fontweight="bold", fontsize=24)
 
-    plt.rcParams["font.size"]=18
-    plt.rcParams["axes.linewidth"]=2
+    plt.rcParams["font.size"] = 18
+    plt.rcParams["axes.linewidth"] = 2
     ax.xaxis.set_tick_params(labelsize=14)
     ax.yaxis.set_tick_params(labelsize=14)
-    plt.legend(prop=dict(size=20,weight='bold'))
+    plt.legend(prop=dict(size=20, weight="bold"))
     plt.tight_layout()
     if not legend:
-        plt.legend([],[], frameon=False)
+        plt.legend([], [], frameon=False)
     plt.savefig(save_loc)
 
-def plot_accs_wrt_n_samples(accs: list,names: list,n_samples: list,save_loc:str) -> None:
+
+def plot_accs_wrt_n_samples(
+    accs: list, names: list, n_samples: list, save_loc: str
+) -> None:
     """
     :param accs: Accuracy values
     :param names: Names of the algorithms
@@ -74,54 +90,68 @@ def plot_accs_wrt_n_samples(accs: list,names: list,n_samples: list,save_loc:str)
     """
 
     plt.close("all")
-    fig, ax = plt.subplots(figsize=(14,7),dpi=600)
+    fig, ax = plt.subplots(figsize=(14, 7), dpi=600)
 
     for i in range(len(accs)):
-        data = pd.DataFrame(accs[i].reshape(-1,1),columns=["Accuracy"])
-        data["N. of Samples"] = n_samples* accs[i].shape[0]
-        sns.lineplot(data=data,x="N. of Samples",y="Accuracy",label=names[i],linewidth=3)
+        data = pd.DataFrame(accs[i].reshape(-1, 1), columns=["Accuracy"])
+        data["N. of Samples"] = n_samples * accs[i].shape[0]
+        sns.lineplot(
+            data=data, x="N. of Samples", y="Accuracy", label=names[i], linewidth=3
+        )
 
-    plt.grid(linestyle='--', linewidth=2)
-    plt.xlabel("Number of Samples",fontweight="bold" ,fontsize=24)
-    plt.ylabel("Accuracy",fontweight="bold" ,fontsize=24)
+    plt.grid(linestyle="--", linewidth=2)
+    plt.xlabel("Number of Samples", fontweight="bold", fontsize=24)
+    plt.ylabel("Accuracy", fontweight="bold", fontsize=24)
 
-    plt.rcParams["font.size"]=18
-    plt.rcParams["axes.linewidth"]=2
+    plt.rcParams["font.size"] = 18
+    plt.rcParams["axes.linewidth"] = 2
     ax.xaxis.set_tick_params(labelsize=14)
     ax.yaxis.set_tick_params(labelsize=14)
-    #plt.legend(prop=dict(size=16,weight='bold'),bbox_to_anchor=(1,1))
+    # plt.legend(prop=dict(size=16,weight='bold'),bbox_to_anchor=(1,1))
     plt.tight_layout()
-    plt.legend([],[], frameon=False)
+    plt.legend([], [], frameon=False)
     plt.savefig(save_loc)
 
-def make_legend(names,save_loc):
 
-    
-    acc_df = pd.DataFrame(np.concatenate([[0,1] for i in range(len(names))]),columns=["Acc"])
+def make_legend(names, save_loc):
+    acc_df = pd.DataFrame(
+        np.concatenate([[0, 1] for i in range(len(names))]), columns=["Acc"]
+    )
 
     n_sim = 2
     df_names = []
     for name in names:
-        df_names.extend([name]*n_sim)
+        df_names.extend([name] * n_sim)
     acc_df["Policy"] = df_names
 
-    #sns.set_theme(style="darkgrid")
+    # sns.set_theme(style="darkgrid")
     plt.close("all")
-    fig, ax = plt.subplots(figsize=(7,7),dpi=600)
+    fig, ax = plt.subplots(figsize=(7, 7), dpi=600)
     order = names
-    gg = sns.boxplot(data=acc_df,x="Policy",y="Acc",order=order)
+    gg = sns.boxplot(data=acc_df, x="Policy", y="Acc", order=order)
     boxes = ax.findobj(matplotlib.patches.PathPatch)
     for i in range(len(names)):
         boxes[i].set_label(names[i])
 
-    figLegend = pylab.figure(figsize = (11.5,0.5),dpi=600)
+    figLegend = pylab.figure(figsize=(11.5, 0.5), dpi=600)
 
-    pylab.figlegend(handles=boxes,loc='upper left', mode='expand', ncol=len(names), fontsize=26, borderaxespad=0, frameon=False,prop={'weight':'bold',"size":26})
+    pylab.figlegend(
+        handles=boxes,
+        loc="upper left",
+        mode="expand",
+        ncol=len(names),
+        fontsize=26,
+        borderaxespad=0,
+        frameon=False,
+        prop={"weight": "bold", "size": 26},
+    )
     figLegend.savefig(save_loc)
 
-# Creates L2-Norm Plots for the simulations
-def plot_values(values: list,names: list,save_loc:str,y_label:str,linestyles=["--","-","-."]) -> None:
 
+# Creates L2-Norm Plots for the simulations
+def plot_values(
+    values: list, names: list, save_loc: str, y_label: str, linestyles=["--", "-", "-."]
+) -> None:
     """
     :param accs: Accuracy values
     :param names: Names of the algorithms
@@ -130,106 +160,98 @@ def plot_values(values: list,names: list,save_loc:str,y_label:str,linestyles=["-
     """
 
     plt.close("all")
-    fig, ax = plt.subplots(figsize=(7,7),dpi=600)
+    fig, ax = plt.subplots(figsize=(7, 7), dpi=600)
 
     for i in range(len(values)):
-        data = pd.DataFrame(values[i].reshape(-1,1),columns=[y_label])
-        data["Round"] = [i for i in range(values[i].shape[1])]* values[i].shape[0]
-        sns.lineplot(data=data,x="Round",y=y_label,label=names[i],linewidth=3,linestyle=linestyles[i])
+        data = pd.DataFrame(values[i].reshape(-1, 1), columns=[y_label])
+        data["Round"] = [i for i in range(values[i].shape[1])] * values[i].shape[0]
+        sns.lineplot(
+            data=data,
+            x="Round",
+            y=y_label,
+            label=names[i],
+            linewidth=3,
+            linestyle=linestyles[i],
+        )
 
-    plt.grid(linestyle='--', linewidth=2)
-    plt.xlabel("Round $r$",fontweight="bold" ,fontsize=24)
-    plt.ylabel(y_label,fontweight="bold" ,fontsize=24)
+    plt.grid(linestyle="--", linewidth=2)
+    plt.xlabel("Round $r$", fontweight="bold", fontsize=24)
+    plt.ylabel(y_label, fontweight="bold", fontsize=24)
 
-    plt.rcParams["font.size"]=18
-    plt.rcParams["axes.linewidth"]=2
+    plt.rcParams["font.size"] = 18
+    plt.rcParams["axes.linewidth"] = 2
     ax.xaxis.set_tick_params(labelsize=14)
     ax.yaxis.set_tick_params(labelsize=14)
-    plt.legend(prop=dict(size=20,weight='bold'))
+    plt.legend(prop=dict(size=20, weight="bold"))
     plt.tight_layout()
-    plt.legend([],[], frameon=False)
+    plt.legend([], [], frameon=False)
     plt.savefig(save_loc)
 
-# Creates Accuracy plots for the simulations
-def plot_boxplot_values(values,names,save_loc,y_label,plt_int=False):
 
+# Creates Accuracy plots for the simulations
+def plot_boxplot_values(values, names, save_loc, y_label, plt_int=False):
     vals = np.concatenate(values)
-    df = pd.DataFrame(vals,columns=[y_label])
+    df = pd.DataFrame(vals, columns=[y_label])
 
     n_sim = len(values[0])
 
     df_names = []
     for name in names:
-        df_names.extend([name]*n_sim)
+        df_names.extend([name] * n_sim)
     df["Policy"] = df_names
 
     sns.set_theme(style="darkgrid")
     plt.close("all")
-    fig, ax = plt.subplots(figsize=(7,7),dpi=600)
-    gg = sns.boxplot(data=df,x="Policy",y=y_label,order=names)
-    
+    fig, ax = plt.subplots(figsize=(7, 7), dpi=600)
+    gg = sns.boxplot(data=df, x="Policy", y=y_label, order=names)
+
     boxes = ax.findobj(matplotlib.patches.PathPatch)
 
-    colors = [  "gray","tab:blue","tab:orange","tab:green"]
+    colors = ["gray", "tab:blue", "tab:orange", "tab:green"]
 
     for color, box in zip(colors, boxes):
         box.set_facecolor(color)
-    
+
     for i in range(len(names)):
         boxes[i].set_label(names[i])
 
     if n_sim >= 2:
-        f = add_stat_annotation(gg, data=df, x="Policy", y=y_label, order=names,
-                    box_pairs=[((names[1]), (names[3]))],
-                     test='Wilcoxon', text_format='full', loc='outside', verbose=0,fontsize=20)
+        f = add_stat_annotation(
+            gg,
+            data=df,
+            x="Policy",
+            y=y_label,
+            order=names,
+            box_pairs=[((names[1]), (names[3]))],
+            test="Wilcoxon",
+            text_format="full",
+            loc="outside",
+            verbose=0,
+            fontsize=20,
+        )
     else:
-        f = add_stat_annotation(gg, data=df, x="Policy", y=y_label, order=names,
-                    box_pairs=[((names[1]), (names[1]))],
-                     test='Mann-Whitney', text_format='full', loc='outside', verbose=0,fontsize=20)
+        f = add_stat_annotation(
+            gg,
+            data=df,
+            x="Policy",
+            y=y_label,
+            order=names,
+            box_pairs=[((names[1]), (names[1]))],
+            test="Mann-Whitney",
+            text_format="full",
+            loc="outside",
+            verbose=0,
+            fontsize=20,
+        )
 
-    ax.set_xlabel(ax.get_xlabel(), fontdict={'weight': 'bold',"size":24})
-    plt.ylabel(y_label,fontweight="bold" ,fontsize=24)
-    plt.rcParams["font.size"]=18
-    plt.rcParams["axes.linewidth"]=2
-    ax.xaxis.set_tick_params(labelsize=14,width=2)
+    ax.set_xlabel(ax.get_xlabel(), fontdict={"weight": "bold", "size": 24})
+    plt.ylabel(y_label, fontweight="bold", fontsize=24)
+    plt.rcParams["font.size"] = 18
+    plt.rcParams["axes.linewidth"] = 2
+    ax.xaxis.set_tick_params(labelsize=14, width=2)
     ax.yaxis.set_tick_params(labelsize=14)
-    locs,labels = plt.xticks()
-    plt.xticks(locs,labels,weight="bold")
+    locs, labels = plt.xticks()
+    plt.xticks(locs, labels, weight="bold")
     plt.tight_layout()
-    plt.legend([],[], frameon=False)
+    plt.legend([], [], frameon=False)
     plt.savefig(save_loc)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
