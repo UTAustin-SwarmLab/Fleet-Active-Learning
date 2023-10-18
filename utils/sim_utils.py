@@ -207,11 +207,15 @@ class Sim:
                     ind_s = random.sample(
                         np.argwhere(y == i).tolist()[0], k=N_x[dev_i][i]
                     )
-                    obs_ind[round_i][dev_i * self.params["n_same_device"]].extend(ind_s)
-                for same_i in range(1, self.params["n_same_device"]):
                     obs_ind[round_i][
-                        dev_i * self.params["n_same_device"] + same_i
-                    ] = obs_ind[round_i][dev_i * self.params["n_same_device"]].copy()
+                        dev_i * self.params["n_device_per_environment"]
+                    ].extend(ind_s)
+                for same_i in range(1, self.params["n_device_per_environment"]):
+                    obs_ind[round_i][
+                        dev_i * self.params["n_device_per_environment"] + same_i
+                    ] = obs_ind[round_i][
+                        dev_i * self.params["n_device_per_environment"]
+                    ].copy()
 
         return obs_ind
 
@@ -224,13 +228,15 @@ class Sim:
         for round_i in range(self.n_rounds):
             obs_ind[round_i] = [[] for i in range(self.n_device)]
             for dev_i in range(self.params["n_environment"]):
-                obs_ind[round_i][dev_i * self.params["n_same_device"]] = random.sample(
-                    [i for i in range(len(y))], k=self.n_obs
-                )
-                for same_i in range(1, self.params["n_same_device"]):
+                obs_ind[round_i][
+                    dev_i * self.params["n_device_per_environment"]
+                ] = random.sample([i for i in range(len(y))], k=self.n_obs)
+                for same_i in range(1, self.params["n_device_per_environment"]):
                     obs_ind[round_i][
-                        dev_i * self.params["n_same_device"] + same_i
-                    ] = obs_ind[round_i][dev_i * self.params["n_same_device"]].copy()
+                        dev_i * self.params["n_device_per_environment"] + same_i
+                    ] = obs_ind[round_i][
+                        dev_i * self.params["n_device_per_environment"]
+                    ].copy()
 
         return obs_ind
 
@@ -569,7 +575,7 @@ class Sim:
                     M, all_indices, obs_ind[round_i], self.dataset_ind[sim_seed][-1]
                 )
 
-                if self.params["center_selection"] == "kcenter":
+                if self.params["cache_selection"] == "kcenter":
                     sampling_policy = kCenterGreedy(
                         embeddings,
                         base_embeddings,
@@ -577,7 +583,7 @@ class Sim:
                         self.n_iter,
                         self.n_cache,
                     )
-                elif self.params["center_selection"] == "facility":
+                elif self.params["cache_selection"] == "facility":
                     sampling_policy = FacilityLocation_with_M(
                         M, M_max, obs_ind[round_i], self.n_cache
                     )
@@ -708,7 +714,7 @@ class Sim_Detect(Sim):
                     M, all_indices, obs_ind[round_i], self.dataset_ind[sim_seed][-1]
                 )
 
-                if self.params["center_selection"] == "kcenter":
+                if self.params["cache_selection"] == "kcenter":
                     sampling_policy = kCenterGreedy(
                         embeddings,
                         base_embeddings,
@@ -716,7 +722,7 @@ class Sim_Detect(Sim):
                         self.n_iter,
                         self.n_cache,
                     )
-                elif self.params["center_selection"] == "facility":
+                elif self.params["cache_selection"] == "facility":
                     sampling_policy = FacilityLocation_with_M(
                         M, M_max, obs_ind[round_i], self.n_cache
                     )
@@ -887,7 +893,7 @@ class Sim_FL(Sim):
                         M, all_indices, obs_ind[round_i], self.dataset_ind[sim_seed][-1]
                     )
 
-                    if self.params["center_selection"] == "kcenter":
+                    if self.params["cache_selection"] == "kcenter":
                         sampling_policy = kCenterGreedy(
                             embeddings,
                             base_embeddings,
@@ -895,7 +901,7 @@ class Sim_FL(Sim):
                             self.n_iter,
                             self.n_cache,
                         )
-                    elif self.params["center_selection"] == "facility":
+                    elif self.params["cache_selection"] == "facility":
                         sampling_policy = FacilityLocation_with_M(
                             M, M_max, obs_ind[round_i], self.n_cache
                         )

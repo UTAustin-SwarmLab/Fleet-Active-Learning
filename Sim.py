@@ -179,7 +179,6 @@ def run_sim(opt, device):
                 Sim_Model.save_infos(trial_loc, benchmark_methods[i])
 
             # Plot results for each benchmark method
-
             plot_accs(
                 [Sim_Model.accs for Sim_Model in Sim_List],
                 benchmark_methods,
@@ -236,7 +235,7 @@ if __name__ == "__main__":
         "--n-device-per-environment",
         type=int,
         default=5,
-        help="Number of different devices per environment to simulate",
+        help="Number of devices per environment to simulate",
     )
     parser.add_argument(
         "--n-init-model",
