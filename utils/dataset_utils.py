@@ -56,8 +56,6 @@ def create_datasets(X, y, type, cache_all=False, cache_in_first=False, use_embs=
         else:
             dataset = create_AdversarialWeather_dataset(X, y, cache_all)
             dataset.set_use_cache(cache_in_first)
-    elif type == "DeepDrive-Detection":
-        dataset = create_DetectionDataset(X, y)
     else:
         print("Dataset not found")
         exit()
