@@ -44,10 +44,20 @@ pip install -r requirements.txt
 The MNIST and CIFAR10 datasets are automatically downloaded by the PyTorch package. <br />
 The Advere-Weather dataset can be downloaded from
 [Adverse-Weather](http://sar-lab.net/adverse-weather-dataset/#:~:text=This%20dataset%20entails%20tens%20of,overcast%2C%20sunny%2C%20and%20cloudy.) <br />
+
+After downloading the Adverse-Weather dataset, please run the following command to create labels for the dataset:
+```bash
+run_exps/create_labels_adverseweather.sh
+```
 The Berkeley DeepDrive dataset can be downloaded from
 [Berkeley DeepDrive](https://bdd-data.berkeley.edu/)
 
-## How to run
+After downloading the Berkeley DeepDrive dataset, please run the following command to create object detection labels in YOLO format:
+```bash
+run_exps/create_YOLO_labels_deepdrive.sh
+```
+
+## How to run Experiments
 To run experiments on different datasets, please run the following commands:
 For MNIST:
 ```bash
@@ -59,12 +69,26 @@ run_exps/run_cifar10.sh
 ```
 For Adverse-Weather:
 ```bash
-run_exps/run_adverse_weather.sh
+run_exps/run_adverseweather.sh
 ```
 For Berkeley DeepDrive:
 ```bash
-run_exps/run_berkeley_deepdrive.sh
+run_exps/run_deepdrive.sh
 ```
+
+For Berkeley DeepDrive Object Detection Benchmarks:
+```bash
+run_exps/run_deepdrive_detection.sh
+```
+For Federated Learning Benchmarks:
+```bash
+run_exps/run_mnist_fl.sh
+run_exps/run_cifar10_fl.sh
+run_exps/run_adverseweather_fl.sh
+run_exps/run_deepdrive_fl.sh
+```
+
+
 
 ## Citation
 Please cite our paper if you find this work useful for your research:

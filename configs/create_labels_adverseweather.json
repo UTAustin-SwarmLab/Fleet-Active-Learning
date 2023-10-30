@@ -1,0 +1,6 @@
+{
+    "dataset_loc": "/store/datasets/AdverseWeather/Recordings",
+    "out_loc": "./",
+    "frame_per_image": 10,
+    "label_map_loc": "/store/datasets/AdverseWeather/label_maps.yml"
+}
