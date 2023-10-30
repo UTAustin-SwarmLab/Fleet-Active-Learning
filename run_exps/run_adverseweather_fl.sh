@@ -1,1 +1,1 @@
-python3 src/Sim_FL.py --config_path configs/adverseweather_fl.json
+python3 src/Sim_FL.py --config-path configs/adverseweather_fl.json

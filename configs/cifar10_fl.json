@@ -16,7 +16,7 @@
     "initial_train_dataset_size": 10,
     "n_obs": 1000,
     "n_cache": 1,
-    "run_loc": "./runs/CIFAR10",
+    "run_loc": "./runs/CIFAR10-FL",
     "n_sim_per_initial_model": 5,
     "init_sim_for_model": 0,
     "unc_type": "clip",

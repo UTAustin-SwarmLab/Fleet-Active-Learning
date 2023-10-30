@@ -16,7 +16,7 @@
     "initial_train_dataset_size": 50,
     "n_obs": 1000,
     "n_cache": 20,
-    "run_loc": "./runs/DeepDrive",
+    "run_loc": "./runs/DeepDrive-FL",
     "n_sim_per_initial_model": 5,
     "init_sim_for_model": 0,
     "unc_type": "clip",

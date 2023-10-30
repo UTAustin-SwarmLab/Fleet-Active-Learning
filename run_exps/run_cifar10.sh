@@ -1,1 +1,1 @@
-python3 src/Sim.py --config_path configs/cifar10.json
+python3 src/Sim.py --config-path configs/cifar10.json

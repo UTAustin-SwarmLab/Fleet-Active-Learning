@@ -16,7 +16,7 @@
     "initial_train_dataset_size": 16,
     "n_obs": 1000,
     "n_cache": 3,
-    "run_loc": "./runs/MNIST",
+    "run_loc": "./runs/MNIST-FL",
     "n_sim_per_initial_model": 5,
     "init_sim_for_model": 0,
     "unc_type": "badge",
