@@ -1,0 +1,1 @@
+python3 src/Sim.py --config_path configs/cifar10.json
