@@ -48,15 +48,14 @@ class Sim:
         :param model: Model to use for simulation (CNN)
         """
 
-        self.n_device = params["n_device"]
+        self.n_device = params["n_total_device"]
         self.n_rounds = params["n_rounds"]
         self.n_epoch = params["n_epoch"]
         self.b_size = params["b_size"]
-        self.n_iter = params["n_iter"]
         self.n_class = params["n_class"]
         self.test_b_size = params["test_b_size"]
         self.lr = params["lr"]
-        self.n_size = params["n_size"]
+        self.initial_train_dataset_size = params["initial_train_dataset_size"]
         self.n_obs = params["n_obs"]
         self.n_cache = params["n_cache"]
         self.unc_type = params["unc_type"]
@@ -105,7 +104,7 @@ class Sim:
         for i in range(self.n_class):
             N_x_lims[i] = torch.sum(y == i).item()
 
-        n_lim = self.n_size
+        n_lim = self.initial_train_dataset_size
         args = [i for i in range(self.n_class)]
         fulls = []
         while n_lim != 0:
@@ -260,10 +259,7 @@ class Sim:
                     ]
                 )
                 dataset = CIFAR10Dataset(X, y, transform)
-        elif (
-            self.dataset_type == "AdversarialWeather"
-            or self.dataset_type == "DeepDrive"
-        ):
+        elif self.dataset_type == "AdverseWeather" or self.dataset_type == "DeepDrive":
             if self.params["use_embeddings"]:
                 dataset = EmbeddingDataset(X, y)
             else:
@@ -277,7 +273,7 @@ class Sim:
                         ),
                     ]
                 )
-                dataset = AdversarialWeatherDataset(
+                dataset = AdverseWeatherDataset(
                     X, y, transform, self.params["cache_all"]
                 )
         return dataset
@@ -304,10 +300,7 @@ class Sim:
                     ]
                 )
                 dataset = CIFAR10Dataset(X, y, transform)
-        elif (
-            self.dataset_type == "AdversarialWeather"
-            or self.dataset_type == "DeepDrive"
-        ):
+        elif self.dataset_type == "AdverseWeather" or self.dataset_type == "DeepDrive":
             if self.params["use_embeddings"]:
                 dataset = EmbeddingDataset(X, y)
             else:
@@ -322,7 +315,7 @@ class Sim:
                         ),
                     ]
                 )
-                dataset = AdversarialWeatherDataset(
+                dataset = AdverseWeatherDataset(
                     X, y, transform, self.params["cache_all"]
                 )
                 dataset.set_use_cache(self.params["cache_in_first"])
@@ -342,13 +335,13 @@ class Sim:
         return np.random.rand(p.shape[0])
 
     def unc_scores(self, p):
-        if self.unc_type == "Entropy":
+        if self.sim_type == "Entropy":
             return self.Entropy(p)
-        elif self.unc_type == "LeastConfidence":
+        elif self.sim_type == "LeastConfidence":
             return self.LeastConfidence(p)
-        elif self.unc_type == "MarginSampling":
+        elif self.sim_type == "BvSB":
             return self.MarginSampling(p)
-        elif self.unc_type == "Random":
+        elif self.sim_type == "Random":
             return self.Random(p)
         else:
             raise ValueError("Invalid Uncertainty Type")
@@ -431,18 +424,17 @@ class Sim:
         if self.dataset_type == "CIFAR10":
             for i in range(len(embeddings)):
                 embeddings[i] = train_embs[all_inds[i]]
-        elif self.dataset_type == "AdversarialWeather":
+        elif self.dataset_type == "AdverseWeather":
             for i in range(len(embeddings)):
                 embeddings[i] = train_embs[
                     "/".join(X_train[all_inds[i]].split("/")[-4:])
                 ]
-
-        elif (
-            self.dataset_type == "DeepDrive"
-            or self.dataset_type == "DeepDrive-Detection"
-        ):
+        elif self.dataset_type == "DeepDrive-Detection":
             for i in range(len(embeddings)):
                 embeddings[i] = train_embs[X_train[all_inds[i]].split("/")[-1]]
+        elif self.dataset_type == "DeepDrive":
+            for i in range(len(embeddings)):
+                embeddings[i] = train_embs[all_inds[i]]
 
         return embeddings
 
@@ -488,10 +480,7 @@ class Sim:
     def reset_model(self):
         if self.dataset_type == "MNIST" or self.dataset_type == "CIFAR10":
             self.model.apply(init_weights)
-        elif (
-            self.dataset_type == "AdversarialWeather"
-            or self.dataset_type == "DeepDrive"
-        ):
+        elif self.dataset_type == "AdverseWeather" or self.dataset_type == "DeepDrive":
             if self.params["use_embeddings"]:
                 self.model.apply(init_weights)
             else:
@@ -526,10 +515,10 @@ class Sim:
         self.accs[sim_i, 0] = test_model(self.model, testset)
 
         for round_i in range(self.n_rounds):
-            if self.unc_type in [
+            if self.sim_type in [
                 "Entropy",
                 "LeastConfidence",
-                "MarginSampling",
+                "BvSB",
                 "Random",
             ]:
                 all_indices = list()
@@ -603,12 +592,15 @@ class Sim:
             train_model(
                 self.model,
                 trainset,
-                converge=self.params["converge"],
+                converge=self.params["converge_train"],
                 only_final=self.params["train_only_final"],
             )
 
             self.accs[sim_i, round_i + 1] = test_model(
-                self.model, testset, self.test_b_size, self.params["accuracy_type"]
+                self.model,
+                testset,
+                self.test_b_size,
+                self.params["normalized_accuracy"],
             )
 
     def save_infos(self, save_loc, sim_type):
@@ -917,5 +909,8 @@ class Sim_FL(Sim):
 
             self.FL_train(local_inds, X_train, y_train)
             self.accs[sim_i, round_i + 1] = test_model(
-                self.model, testset, self.test_b_size, self.params["accuracy_type"]
+                self.model,
+                testset,
+                self.test_b_size,
+                self.params["normalized_accuracy"],
             )

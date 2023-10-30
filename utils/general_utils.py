@@ -11,6 +11,7 @@ import random
 import seaborn as sns
 import pandas as pd
 import os
+from typing import List, Tuple, Dict
 from statannot import add_stat_annotation
 import sklearn.datasets as ds
 import torch
@@ -123,6 +124,90 @@ def combine_sims(run_ids, run_loc, target_run_loc, sim_types, name="run"):
 
 
 # Combines multiple trials
+def combine_FL_sims(run_ids, run_loc, target_run_loc, sim_types, name="run"):
+    with open(
+        run_loc + "/" + name + str(run_ids[0]) + "/" + sim_types[0] + "_params.json"
+    ) as f:
+        params = json.load(f)
+
+    Acc = dict()
+
+    for sim_type in sim_types:
+        params = dict()
+        with open(
+            run_loc + "/" + name + str(run_ids[0]) + "/" + sim_type + "_params.json"
+        ) as f:
+            params = json.load(f)
+        seeds = list()
+        obs_ind = dict()
+        dataset_ind = dict()
+        Acc[sim_type] = np.zeros((len(run_ids), params["n_rounds"] + 1))
+        tot_sim = 0
+
+        for i, run_i in enumerate(run_ids):
+            with open(
+                run_loc + "/" + name + str(run_i) + "/" + sim_type + "_params.json"
+            ) as f:
+                new_params = json.load(f)
+
+            if new_params != params:
+                print("Error in run" + str(run_i) + ". Params don't match.")
+                continue
+
+            with open(
+                run_loc + "/" + name + str(run_i) + "/" + sim_type + "_seeds.json"
+            ) as f:
+                new_seed = json.load(f)
+
+            if any(s in seeds for s in new_seed):
+                print("Error in run" + str(run_i) + ". The sim seed is already added.")
+                continue
+            else:
+                seeds += new_seed
+            tot_sim += 1
+            with open(
+                run_loc + "/" + name + str(run_i) + "/" + sim_type + "_obs_ind.json"
+            ) as f:
+                new_obs_ind = json.load(f)
+            obs_ind.update(new_obs_ind)
+
+            with open(
+                run_loc + "/" + name + str(run_i) + "/" + sim_type + "_dataset_ind.json"
+            ) as f:
+                new_dataset_ind = json.load(f)
+            dataset_ind.update(new_dataset_ind)
+
+            Acc[sim_type][i, :] = np.load(
+                run_loc + "/" + name + str(run_i) + "/" + sim_type + "_acc.npy"
+            )
+
+        params["n_sim"] = tot_sim
+
+        with open(target_run_loc + "/" + sim_type + "_params.json", "w") as outfile:
+            json.dump(params, outfile)
+
+        with open(target_run_loc + "/" + sim_type + "_obs_ind.json", "w") as outfile:
+            json.dump(obs_ind, outfile)
+
+        with open(
+            target_run_loc + "/" + sim_type + "_dataset_ind.json", "w"
+        ) as outfile:
+            json.dump(dataset_ind, outfile)
+
+        with open(target_run_loc + "/" + sim_type + "_seeds.json", "w") as outfile:
+            json.dump(seeds, outfile)
+
+        with open(target_run_loc + "/" + sim_type + "_acc.npy", "wb") as outfile:
+            np.save(outfile, Acc[sim_type])
+
+    Accs = []
+    for sim_type in sim_types:
+        Accs.append(Acc[sim_type])
+
+    plot_FL_accs(Accs, sim_types, target_run_loc + "/Accs.jpg")
+
+
+# Combines multiple trials
 def combine_det_sims(
     run_ids=[0, 1],
     run_loc="./runs/DeepDrive-Detection/run9",
@@ -227,35 +312,36 @@ def combine_det_sims(
         for sim_type in sim_types:
             Ms[j].append(Metrics[sim_type][j][:, 1])
 
-    sim_types.insert(0, "Initial")
+    plot_sim_types = sim_types.copy()
+    plot_sim_types.insert(0, "Initial")
 
     for i in range(len(metrics)):
-        for sim_type in sim_types:
+        for sim_type in plot_sim_types:
             print(
                 sim_type
                 + " "
                 + metrics[i]
                 + " mean: "
-                + str(np.mean(Ms[i][sim_types.index(sim_type)]))
+                + str(np.mean(Ms[i][plot_sim_types.index(sim_type)]))
             )
             print(
                 sim_type
                 + " "
                 + metrics[i]
                 + " std: "
-                + str(np.std(Ms[i][sim_types.index(sim_type)]))
+                + str(np.std(Ms[i][plot_sim_types.index(sim_type)]))
             )
 
     plot_boxplot_values(
-        Ms[0], sim_types, target_run_loc + "/Precision_box.jpg", "Precision"
+        Ms[0], plot_sim_types, target_run_loc + "/Precision_box.jpg", "Precision"
     )
-    plot_boxplot_values(Ms[1], sim_types, target_run_loc + "/Recall_box.jpg", "Recall")
-    plot_boxplot_values(Ms[2], sim_types, target_run_loc + "/mAP50_box.jpg", "mAP50")
+    plot_boxplot_values(Ms[1], plot_sim_types, target_run_loc + "/Recall_box.jpg", "Recall")
+    plot_boxplot_values(Ms[2], plot_sim_types, target_run_loc + "/mAP50_box.jpg", "mAP50")
     plot_boxplot_values(
-        Ms[3], sim_types, target_run_loc + "/mAP50-95_box.jpg", "mAP50-95"
+        Ms[3], plot_sim_types, target_run_loc + "/mAP50-95_box.jpg", "mAP50-95"
     )
     plot_boxplot_values(
-        Ms[4], sim_types, target_run_loc + "/Fitness_box.jpg", "Fitness"
+        Ms[4], plot_sim_types, target_run_loc + "/Fitness_box.jpg", "Fitness"
     )
 
 
@@ -266,7 +352,7 @@ def clip_obtain_embeddings(X_train, inds, train_embs, dataset_type):
     if dataset_type == "CIFAR10" or dataset_type == "MNIST":
         for i in range(len(embeddings)):
             embeddings[i] = train_embs[inds[i]]
-    elif dataset_type == "AdversarialWeather":
+    elif dataset_type == "AdverseWeather":
         for i in range(len(embeddings)):
             embeddings[i] = train_embs["/".join(X_train[inds[i]].split("/")[-4:])]
 
@@ -387,7 +473,7 @@ def calculate_objective_value(
         dataset_loc, dataset_type, img_loc=img_loc
     )
 
-    if dataset_type == "AdversarialWeather":
+    if dataset_type == "AdverseWeather":
         embs = np.load(clip_emb_loc + "/clip_embs.npy", allow_pickle=True).item()
         train_embs = {
             "/".join(X_train[i].split("/")[-4:]): embs[
@@ -474,7 +560,7 @@ def generate_objective_value_plots(
     )
 
 
-# Creates labels for Adversarial Dataset from foldernames
+# Creates labels for Adverse Dataset from foldernames
 def create_labels_Adverse_Weather(dataset_loc, out_loc, label_map, frame_per_image):
     get_key = lambda x: "/".join(x.split("/")[-4:])
 
@@ -517,12 +603,12 @@ def create_labels_Adverse_Weather(dataset_loc, out_loc, label_map, frame_per_ima
     print("Total size:", len(daytime_label))
 
 
-# Creates Adversarial Weather dataset labels
+# Creates Adverse Weather dataset labels
 def label_Adverse(
-    data_loc="/store/datasets/AdversarialWeather/Recordings",
-    label_map_loc="/store/datasets/AdversarialWeather/label_maps.yml",
+    data_loc="/store/datasets/AdverseWeather/Recordings",
+    label_map_loc="/store/datasets/AdverseWeather/label_maps.yml",
     frame_per_image=10,
-    out_loc="/store/datasets/AdversarialWeather",
+    out_loc="/store/datasets/AdverseWeather",
 ):
     with open(label_map_loc, "r") as f:
         label_map = yaml.safe_load(f)
@@ -543,7 +629,7 @@ def create_tsne_plots(
         dataset_loc, dataset_type, img_loc=img_loc
     )
 
-    if dataset_type == "AdversarialWeather":
+    if dataset_type == "AdverseWeather":
         embs = np.load(clip_emb_loc + "/clip_embs.npy", allow_pickle=True).item()
         train_embs = {
             "/".join(X_train[i].split("/")[-4:]): embs[
@@ -770,7 +856,7 @@ def create_example_plot(save_loc="./"):
 
 
 def create_accuracy_objective_plots(
-    run_loc="./runs/AdversarialWeather/run22",
+    run_loc="./runs/AdverseWeather/run22",
     sim_types=["Distributed", "Oracle", "Interactive"],
 ):
     Values = [
@@ -787,3 +873,9 @@ def create_accuracy_objective_plots(
         run_loc + "/submodular_values.jpg",
         y_label=" Submodular Objective $f(\mathcal{D}_c^r)$",
     )
+
+
+def load_config(config_loc: str) -> Dict:
+    with open(config_loc) as f:
+        config = json.load(f)
+    return config

@@ -6,7 +6,7 @@ from tqdm import tqdm
 from utils.mnist_model import MNISTClassifier
 import os
 from utils.cifar10_model import *
-from utils.adversarialweather import *
+from utils.adverseweather import *
 import torchvision.models as vsmodels
 from ultralytics_yolo.ultralytics import YOLO
 from PIL import Image
@@ -230,11 +230,11 @@ def get_model(
             model = FinalLayerCIFAR10(n_features, n_class)
         else:
             model = CifarResNet(BasicBlock, [2] * 4)
-    elif model_name == "AdversarialWeather" or model_name == "DeepDrive":
+    elif model_name == "AdverseWeather" or model_name == "DeepDrive":
         if use_embs and model_name == "DeepDrive":
             model = FinalLayer(n_features, n_class)
-        elif use_embs and model_name == "AdversarialWeather":
-            model = FinalLayerAdversarial(n_features, n_class)
+        elif use_embs and model_name == "AdverseWeather":
+            model = FinalLayerAdverse(n_features, n_class)
         else:
             model = vsmodels.resnet50(pretrained=True)
             num_features = model.fc.in_features
@@ -339,7 +339,7 @@ def create_embeddings(model_name, device, dataset_type, dataset_loc, save_loc):
     """
 
     if model_name == "clip":
-        if dataset_type in ["CIFAR10", "MNIST", "AdversarialWeather"]:
+        if dataset_type in ["CIFAR10", "MNIST", "AdverseWeather"]:
             model, preprocess = clip.load("RN50", device=device, jit=False)
         elif dataset_type == "DeepDrive":
             model, preprocess = clip.load("ViT-L/14@336px", device=device, jit=False)
@@ -392,7 +392,7 @@ def create_embeddings(model_name, device, dataset_type, dataset_loc, save_loc):
 
         np.save(save_loc + "/train_embs.npy", train_embs)
         np.save(save_loc + "/test_embs.npy", test_embs)
-    elif dataset_type == "AdversarialWeather":
+    elif dataset_type == "AdverseWeather":
         get_key = lambda x: "/".join(x.split("/")[-4:])
 
         with open(dataset_loc + "/weather_labels.json", "r") as file:
@@ -466,20 +466,30 @@ def get_clip_embeddings(X, clip_emb_loc, dataset_type, dataset_loc, device):
     :param device: Device to be used
     """
 
-    if dataset_type == "AdversarialWeather":
+    if dataset_type == "AdverseWeather":
         if not os.path.exists(clip_emb_loc + "/clip_embs.npy"):
             create_embeddings("clip", device, dataset_type, dataset_loc, clip_emb_loc)
-    elif dataset_type == "CIFAR10" or dataset_type == "DeepDrive":
+    elif (
+        dataset_type == "CIFAR10"
+        or dataset_type == "DeepDrive"
+        or dataset_type == "DeepDrive-Detection"
+    ):
         if not os.path.exists(clip_emb_loc + "/train_embs.npy"):
             create_embeddings("clip", device, dataset_type, dataset_loc, clip_emb_loc)
 
-    if dataset_type == "AdversarialWeather":
+    if dataset_type == "AdverseWeather":
         embs = np.load(clip_emb_loc + "/clip_embs.npy", allow_pickle=True).item()
         clip_embs = {
             "/".join(X[i].split("/")[-4:]): embs["/".join(X[i].split("/")[-4:])]
             for i in range(len(X))
         }
+    elif dataset_type == "CIFAR10" or dataset_type == "DeepDrive-Detection":
+        clip_embs = np.load(clip_emb_loc + "/train_embs.npy", allow_pickle=True).item()
     else:
         clip_embs = np.load(clip_emb_loc + "/train_embs.npy", allow_pickle=True).item()
+        embs = dict()
+        for i in range(len(X[1])):
+            embs[i] = clip_embs[X[1][i].split("/")[-1]]
+        clip_embs = embs
 
     return clip_embs

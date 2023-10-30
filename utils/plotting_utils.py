@@ -38,7 +38,8 @@ def plot_accs(
     accs: list,
     names: list,
     save_loc: str,
-    linestyles=["--", "-", "-.", "-", "--", "-."],
+    linestyles=["--", "-", "-.", ":", "--", "-", "-."],
+    markers=["P", "o", "s", "D", "^", "v", "X"],
     legend: bool = False,
 ) -> None:
     """
@@ -60,7 +61,9 @@ def plot_accs(
             y="Accuracy",
             label=names[i],
             linestyle=linestyles[i],
+            marker=markers[i],
             linewidth=3,
+            markersize=10,
         )
 
     plt.grid(linestyle="--", linewidth=2)
@@ -512,3 +515,51 @@ def make_federated_learning_legend(save_loc="./"):
         frameon=False,
     )
     figLegend.savefig(os.path.join(save_loc, f"FLlengend.png"), dpi=600)
+
+
+# Creates L2-Norm Plots for the simulations
+def plot_FL_accs(
+    accs: list,
+    names: list,
+    save_loc: str,
+    linestyles=[":", "--", "-", "-.", ":", "--", "-", "-."],
+    legend: bool = False,
+) -> None:
+    """
+    :param accs: Accuracy values
+    :param names: Names of the algorithms
+    :param save_loc: Location to save the plot
+    :return: None
+    """
+
+    plt.close("all")
+    fig, ax = plt.subplots(figsize=(7, 7), dpi=600)
+
+    colors = sns.color_palette("PuRd", 8)
+
+    for i in range(len(accs)):
+        data = pd.DataFrame(accs[i].reshape(-1, 1), columns=["Accuracy"])
+        data["Round"] = [i for i in range(accs[i].shape[1])] * accs[i].shape[0]
+        sns.lineplot(
+            data=data,
+            x="Round",
+            y="Accuracy",
+            label=names[i],
+            linestyle=linestyles[i],
+            color=colors[i + 2],
+            linewidth=3,
+        )
+
+    plt.grid(linestyle="--", linewidth=2)
+    plt.xlabel("Round $r$", fontweight="bold", fontsize=24)
+    plt.ylabel("Accuracy", fontweight="bold", fontsize=24)
+
+    plt.rcParams["font.size"] = 18
+    plt.rcParams["axes.linewidth"] = 2
+    ax.xaxis.set_tick_params(labelsize=14)
+    ax.yaxis.set_tick_params(labelsize=14)
+    plt.legend(prop=dict(size=20, weight="bold"))
+    plt.tight_layout()
+    if not legend:
+        plt.legend([], [], frameon=False)
+    plt.savefig(save_loc)

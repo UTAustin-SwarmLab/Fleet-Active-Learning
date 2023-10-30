@@ -50,11 +50,11 @@ def create_datasets(X, y, type, cache_all=False, cache_in_first=False, use_embs=
             dataset = create_Embedding_dataset(X, y)
         else:
             dataset = create_CIFAR10_datasets(X, y)
-    elif type == "AdversarialWeather" or type == "DeepDrive":
+    elif type == "AdverseWeather" or type == "DeepDrive":
         if use_embs:
             dataset = create_Embedding_dataset(X, y)
         else:
-            dataset = create_AdversarialWeather_dataset(X, y, cache_all)
+            dataset = create_AdverseWeather_dataset(X, y, cache_all)
             dataset.set_use_cache(cache_in_first)
     else:
         print("Dataset not found")
@@ -92,8 +92,8 @@ def create_CIFAR10_datasets(X, y):
     return dataset
 
 
-# Creates AdversarialWeather Dataset
-def create_AdversarialWeather_dataset(X, y, cache_all=False):
+# Creates AdverseWeather Dataset
+def create_AdverseWeather_dataset(X, y, cache_all=False):
     transform = trfm.Compose(
         [
             trfm.Resize(256),
@@ -102,7 +102,7 @@ def create_AdversarialWeather_dataset(X, y, cache_all=False):
             trfm.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ]
     )
-    dataset = AdversarialWeatherDataset(X, y, transform, cache_all)
+    dataset = AdverseWeatherDataset(X, y, transform, cache_all)
     return dataset
 
 
@@ -195,7 +195,7 @@ def load_datasets(
             y_test = torch.tensor(testset.targets, dtype=int)
 
             return X_train, X_test, y_train, y_test
-    elif type == "AdversarialWeather":
+    elif type == "AdverseWeather":
         with open(save_dir + "/weather_labels.json", "r") as file:
             weather_labels = json.load(file)
         with open(save_dir + "/daytime_labels.json", "r") as file:
@@ -220,6 +220,9 @@ def load_datasets(
             X, y, test_size=test_ratio, stratify=y, random_state=1
         )
 
+        train_locs = X_train
+        test_locs = X_test
+
         if use_embs:
             if not os.path.exists(emb_loc + "/embs.npy"):
                 create_embeddings(backbone, device, type, save_dir, emb_loc)
@@ -238,7 +241,12 @@ def load_datasets(
             X_train = train_data
             X_test = test_data
 
-        return np.array(X_train), np.array(X_test), y_train, y_test
+        return (
+            (np.array(X_train), train_locs),
+            (np.array(X_test), test_locs),
+            y_train,
+            y_test,
+        )
     elif type == "DeepDrive":
         with open(save_dir + "/det_train.json", "r") as file:
             train_labels = json.load(file)
@@ -307,7 +315,12 @@ def load_datasets(
         y_train = y_train[filt_train]
         y_test = y_test[filt_test]
 
-        return np.array(X_train), np.array(X_test), y_train, y_test
+        return (
+            (np.array(X_train), train_locs),
+            (np.array(X_test), test_locs),
+            y_train,
+            y_test,
+        )
     elif type == "DeepDrive-Detection":
         with open(save_dir + "/det_train.json", "r") as file:
             train_labels = json.load(file)
@@ -448,8 +461,8 @@ class CIFAR10Dataset(Dataset):
         return self
 
 
-# Dataset Class for the AdversarialWeather and BDD Datasets
-class AdversarialWeatherDataset(Dataset):
+# Dataset Class for the AdverseWeather and BDD Datasets
+class AdverseWeatherDataset(Dataset):
     def __init__(self, X, y, transform=None, cache_all=False):
         if cache_all:
             self.img_locs = X.numpy()
@@ -496,7 +509,7 @@ class AdversarialWeatherDataset(Dataset):
             self.imgs = None
 
 
-# Creates Embeddings Dataset for the AdversarialWeather and BDD Datasets
+# Creates Embeddings Dataset for the AdverseWeather and BDD Datasets
 class EmbeddingDataset(Dataset):
     def __init__(self, features, labels):
         self.features = features

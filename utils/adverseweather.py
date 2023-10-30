@@ -133,7 +133,7 @@ class Bottleneck(nn.Module):
 
         return out
 
-class AdversarialWeatherResNet(nn.Module):
+class AdverseWeatherResNet(nn.Module):
 
     def __init__(
         self,
@@ -145,7 +145,7 @@ class AdversarialWeatherResNet(nn.Module):
         replace_stride_with_dilation: Optional[List[bool]] = None,
         norm_layer: Optional[Callable[..., nn.Module]] = None
     ) -> None:
-        super(AdversarialWeatherResNet, self).__init__()
+        super(AdverseWeatherResNet, self).__init__()
         block = BasicBlock
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -243,7 +243,7 @@ class AdversarialWeatherResNet(nn.Module):
 """
 
 
-class AdversarialWeatherResNet(nn.Module):
+class AdverseWeatherResNet(nn.Module):
     def __init__(self, output_layer=None, n_class=10) -> None:
         super().__init__()
         self.pretrained = vsmodels.resnet18(pretrained=True)
@@ -296,7 +296,7 @@ class FinalLayer(nn.Module):
         return out, emb
 
 
-class FinalLayerAdversarial(nn.Module):
+class FinalLayerAdverse(nn.Module):
     def __init__(self, input_size=512, n_class=10) -> None:
         super().__init__()
         self.fc1 = nn.Sequential(
