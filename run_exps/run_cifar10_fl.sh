@@ -1,0 +1,1 @@
+python3 src/Sim_FL.py --config-path configs/cifar10_fl.json

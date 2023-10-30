@@ -1,0 +1,1 @@
+python3 src/Sim.py --config-path configs/deepdrive.json
