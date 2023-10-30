@@ -1,5 +1,6 @@
 *.pt
 *.jpeg
+*.jpg
 runs/
 conv_opt/
 *.pyc
