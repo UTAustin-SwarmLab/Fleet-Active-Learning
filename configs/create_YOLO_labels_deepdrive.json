@@ -1,0 +1,5 @@
+{
+    "train_annotations_loc": "/store/datasets/bdd100k/labels/det_20/det_train.json",
+    "val_annotations_loc": "/store/datasets/bdd100k/labels/det_20/det_val.json",
+    "imgs_path": "/store/datasets/bdd100k/images/100k"
+}
