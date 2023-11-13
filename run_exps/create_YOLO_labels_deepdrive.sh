@@ -1,1 +1,1 @@
-python3 src/create_YOLO_labels_deepdrive.py --config-path configs/create_YOLO_labels_deepdrive.json
+poetry run python3 src/create_YOLO_labels_deepdrive.py --config-path configs/create_YOLO_labels_deepdrive.json

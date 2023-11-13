@@ -1,7 +1,5 @@
 import numpy as np
 from sklearn.metrics import pairwise_distances
-import random
-from copy import deepcopy
 import heapq
 
 

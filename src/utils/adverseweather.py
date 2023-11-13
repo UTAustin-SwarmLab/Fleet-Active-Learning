@@ -1,9 +1,5 @@
-import torch
-from torch import Tensor
 import torch.nn as nn
-from typing import Type, Any, Callable, Union, List, Optional
 import torchvision.models as vsmodels
-import torch.nn.init as init
 
 
 def conv3x3(

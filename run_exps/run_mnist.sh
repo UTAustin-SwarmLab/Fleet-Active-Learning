@@ -1,1 +1,1 @@
-python3 src/Sim.py --config-path configs/mnist.json
+poetry run python3 src/Sim.py --config-path configs/mnist.json

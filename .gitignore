@@ -8,3 +8,5 @@ plots/
 logs/
 bdd100k/
 datasets/
+configs_test/
+run_exps_test/

@@ -1,37 +1,11 @@
-from re import VERBOSE
-from tabnanny import verbose
-from tkinter import N
 import numpy as np
-import cvxpy as cp
-from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from iteround import saferound
-import random
 import seaborn as sns
-import pandas as pd
 import os
-from typing import List, Tuple, Dict
-from statannot import add_stat_annotation
-import sklearn.datasets as ds
-import torch
-import torchvision.datasets as datasets
-import torchvision.transforms as trfm
-import mosek
-import torch.nn as nn
-import torch.optim as optim
-from torch.optim import lr_scheduler
+from typing import Dict
 import yaml
-import shutil
-import torchvision.models as vsmodels
 import json
-from PIL import Image
-import cv2
-import math
-import matplotlib.patches
-import pylab
-import plotly.express as px
-import gmplot
 from sklearn.metrics import pairwise_distances
 from sklearn.manifold import TSNE
 from utils.plotting_utils import *
@@ -335,8 +309,12 @@ def combine_det_sims(
     plot_boxplot_values(
         Ms[0], plot_sim_types, target_run_loc + "/Precision_box.jpg", "Precision"
     )
-    plot_boxplot_values(Ms[1], plot_sim_types, target_run_loc + "/Recall_box.jpg", "Recall")
-    plot_boxplot_values(Ms[2], plot_sim_types, target_run_loc + "/mAP50_box.jpg", "mAP50")
+    plot_boxplot_values(
+        Ms[1], plot_sim_types, target_run_loc + "/Recall_box.jpg", "Recall"
+    )
+    plot_boxplot_values(
+        Ms[2], plot_sim_types, target_run_loc + "/mAP50_box.jpg", "mAP50"
+    )
     plot_boxplot_values(
         Ms[3], plot_sim_types, target_run_loc + "/mAP50-95_box.jpg", "mAP50-95"
     )

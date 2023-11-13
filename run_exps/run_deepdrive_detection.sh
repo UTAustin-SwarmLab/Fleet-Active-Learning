@@ -1,1 +1,1 @@
-CUDA_VISIBLE_DEVICES=0 python3 src/Sim_Detect.py --config-path configs/deepdrive_detection.json
+CUDA_VISIBLE_DEVICES=0 poetry run python3 src/Sim_Detect.py --config-path configs/deepdrive_detection.json

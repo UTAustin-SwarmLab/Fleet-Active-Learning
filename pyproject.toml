@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "fleet active learning"
+version = "0.1.0"
+description = "The repo for Fleet Active Learning Paper"
+authors = ["Oguzhan Akcin"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.9.7"
+numpy = "1.26.2"
+tqdm = "4.66.1"
+torch = "2.0.0"
+torchvision = "0.15.1"
+matplotlib = "3.8.1"
+seaborn = "0.13.0"
+pyyaml = "6.0.1"
+scikit-learn = "1.3.2"
+statannot = "0.2.3"
+opencv-python = "4.8.1.78"
+ultralytics = "8.0.208"
+ftfy = "6.1.1"
+regex = "2023.10.3"
+clip = {git = "https://github.com/openai/CLIP.git"}
+iteround = "1.0.4"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,7 +1,5 @@
 import torch.nn as nn
 import torch
-from torch.utils.data import Dataset
-from PIL import Image
 
 
 # Classifier Model for the MNIST Datassets

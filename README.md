@@ -35,11 +35,27 @@ In multi-robot systems, robots often gather data to improve the performance of t
 **Experimental Results:** Each column represents a different dataset. *Row 1* shows the submodular objective of the cloud dataset across the rounds. Both the **_Centralized_** and **_Interactive_** policies achieve similar objectives, while the **_Distributed_** fails to reach the same level of performance. *Row 2* presents the accuracy of the retrained neural networks using the dataset $\mathcal{D}_c^{r}$ in each round $r$. The accuracy plots exhibits a similar trend as the submodular objective, with the **_Interactive_** and **_Centralized_** policies consistently outperforming other benchmark policies.
 
 ## Installation
+
 ### Packages
-For the installation of the required packages please run the following command:
+For the installation of the required packages and datasets, please first create a virtual environment with Python 3.9.7. You can use the following command to create a virtual environment using conda:
 ```bash
-pip install -r requirements.txt
+conda create -n fal python=3.9.7
 ```
+Then, activate the virtual environment:
+```bash
+conda activate fal
+```
+
+This repository uses poetry for package management. Please install poetry using the following command:
+```bash
+pip3 install poetry
+```
+
+Then, you can install the required packages using the following command:
+```bash
+poetry lock && poetry install
+```
+
 ### Datasets
 The MNIST and CIFAR10 datasets are automatically downloaded by the PyTorch package. <br />
 The Advere-Weather dataset can be downloaded from
